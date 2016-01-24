@@ -220,6 +220,9 @@ void MainWindow::resetFilter()
     m_topicBox->clear();
     m_topicBox->addItem(QString());
     m_topicBox->addItems(m_model.topics());
+
+    m_titleEdit->clear();
+    m_titleEdit->setFocus();
 }
 
 void MainWindow::resetFilterPressed()
