@@ -22,7 +22,7 @@ int Model::rowCount(const QModelIndex& parent) const
         return 0;
     }
 
-    return m_id.size();
+    return m_fetched;
 }
 
 int Model::columnCount(const QModelIndex& parent) const
@@ -150,6 +150,32 @@ void Model::sort(int column, Qt::SortOrder order)
     endResetModel();
 }
 
+bool Model::canFetchMore(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+    {
+        return false;
+    }
+
+    return m_id.size() > m_fetched;
+}
+
+void Model::fetchMore(const QModelIndex& parent)
+{
+    if (parent.isValid())
+    {
+        return;
+    }
+
+    const auto fetch = qMin(256, m_id.size() - m_fetched);
+
+    beginInsertRows({}, m_fetched, m_fetched + fetch - 1);
+
+    m_fetched += fetch;
+
+    endInsertRows();
+}
+
 QStringList Model::channels() const
 {
     return m_database.channels();
@@ -197,6 +223,7 @@ void Model::reset()
     m_sortOrder = Qt::AscendingOrder;
 
     m_id = m_database.id();
+    m_fetched = 0;
 
     endResetModel();
 }
@@ -231,6 +258,7 @@ void Model::update()
                m_channel, m_topic, m_title,
                sortField, m_sortOrder
            );
+    m_fetched = 0;
 }
 
 } // Mediathek

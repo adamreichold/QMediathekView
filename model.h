@@ -29,6 +29,10 @@ public:
     void filter(const QString& channel, const QString& topic, const QString& title);
     void sort(int column, Qt::SortOrder order) override;
 
+protected:
+    bool canFetchMore(const QModelIndex& parent) const override;
+    void fetchMore(const QModelIndex& parent) override;
+
 public:
     QStringList channels() const;
     QStringList topics() const;
@@ -44,6 +48,7 @@ private:
     const Database& m_database;
 
     QVector< quintptr > m_id;
+    int m_fetched = 0;
 
     QString m_channel;
     QString m_topic;
