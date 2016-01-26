@@ -27,6 +27,7 @@ SOURCES += \
 
 HEADERS += \
     settings.h \
+    schema.h \
     parser.h \
     database.h \
     model.h \

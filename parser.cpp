@@ -12,14 +12,14 @@ using namespace Mediathek;
 template< typename Iterator, typename Skipper >
 struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 {
-    Entry entry;
+    Show show;
     const Inserter& inserter;
 
     void setChannel(const std::string& channel)
     {
         if (!channel.empty())
         {
-            entry.channel = QString::fromStdString(channel);
+            show.channel = QString::fromStdString(channel);
         }
     }
 
@@ -27,13 +27,13 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
     {
         if (!topic.empty())
         {
-            entry.topic = QString::fromStdString(topic);
+            show.topic = QString::fromStdString(topic);
         }
     }
 
     void setTitle(const std::string& title)
     {
-        entry.title = QString::fromStdString(title);
+        show.title = QString::fromStdString(title);
     }
 
     void setDate(const boost::fusion::vector< int, int, int>& date)
@@ -44,12 +44,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& month = at_c<1>(date);
         const auto& year = at_c<2>(date);
 
-        entry.date = QDate(year, month, day);
+        show.date = QDate(year, month, day);
     }
 
     void resetDate()
     {
-        entry.date = {};
+        show.date = {};
     }
 
     void setTime(const boost::fusion::vector< int, int, int>& time)
@@ -60,12 +60,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& minute = at_c<1>(time);
         const auto& second = at_c<2>(time);
 
-        entry.time = QTime(hour, minute, second);
+        show.time = QTime(hour, minute, second);
     }
 
     void resetTime()
     {
-        entry.time = {};
+        show.time = {};
     }
 
     void setDuration(const boost::fusion::vector< int, int, int>& duration)
@@ -76,27 +76,27 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& minute = at_c<1>(duration);
         const auto& second = at_c<2>(duration);
 
-        entry.duration = QTime(hour, minute, second);
+        show.duration = QTime(hour, minute, second);
     }
 
     void resetDuration()
     {
-        entry.duration = {};
+        show.duration = {};
     }
 
     void setDescription(const std::string& description)
     {
-        entry.description = QString::fromStdString(description);
+        show.description = QString::fromStdString(description);
     }
 
     void setWebsite(const std::string& website)
     {
-        entry.website = QString::fromStdString(website);
+        show.website = QString::fromStdString(website);
     }
 
     void setUrl(const std::string& url)
     {
-        entry.url = QString::fromStdString(url);
+        show.url = QString::fromStdString(url);
     }
 
     void setUrlSmall(const boost::fusion::vector< int, std::string >& replacement)
@@ -106,12 +106,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& offset = at_c<0>(replacement);
         const auto& text = at_c<1>(replacement);
 
-        entry.urlSmall = entry.url.left(offset) + QString::fromStdString(text);
+        show.urlSmall = show.url.left(offset) + QString::fromStdString(text);
     }
 
     void resetUrlSmall()
     {
-        entry.urlSmall.clear();
+        show.urlSmall.clear();
     }
 
     void setUrlLarge(const boost::fusion::vector< int, std::string >& replacement)
@@ -121,17 +121,17 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& offset = at_c<0>(replacement);
         const auto& text = at_c<1>(replacement);
 
-        entry.urlLarge = entry.url.left(offset) + QString::fromStdString(text);
+        show.urlLarge = show.url.left(offset) + QString::fromStdString(text);
     }
 
     void resetUrlLarge()
     {
-        entry.urlLarge.clear();
+        show.urlLarge.clear();
     }
 
     void insertEntry()
     {
-        inserter(entry);
+        inserter(show);
     }
 
     template< typename Attributes >

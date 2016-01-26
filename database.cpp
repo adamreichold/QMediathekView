@@ -505,12 +505,12 @@ void Database::update(const QByteArray& data)
                               " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                           ));
 
-            const auto inserter = [&query](const Entry& entry)
+            const auto inserter = [&query](const Show& show)
             {
-                query << entry.channel << entry.topic << entry.title
-                      << entry.date.toJulianDay() << entry.time.msecsSinceStartOfDay() << entry.duration.msecsSinceStartOfDay()
-                      << entry.description << entry.website
-                      << entry.url << entry.urlSmall << entry.urlLarge;
+                query << show.channel << show.topic << show.title
+                      << show.date.toJulianDay() << show.time.msecsSinceStartOfDay() << show.duration.msecsSinceStartOfDay()
+                      << show.description << show.website
+                      << show.url << show.urlSmall << show.urlLarge;
 
                 query.exec();
             };
