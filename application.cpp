@@ -135,31 +135,29 @@ int Application::exec()
     return QApplication::exec();
 }
 
-void Application::play(const quintptr id)
+void Application::play(const QModelIndex& index)
 {
-    auto url = m_database->url(id, Database::UrlLarge);
+    auto url = m_model->url(index);
 
     if (url.isEmpty())
     {
-        url = m_database->url(id, Database::UrlDefault);
+        url = m_model->urlLarge(index);
     }
 
     if (url.isEmpty())
     {
-        url = m_database->url(id, Database::UrlSmall);
+        url = m_model->urlSmall(index);
     }
 
-    QProcess::startDetached(m_settings->playCommand().arg(url.toString()));
+    QProcess::startDetached(m_settings->playCommand().arg(url));
 }
 
-void Application::download(const quintptr id)
+void Application::download(const QModelIndex& index)
 {
     const auto dialog = new DownloadDialog(
         *m_settings,
-        m_database->title(id),
-        m_database->url(id, Database::UrlDefault),
-        m_database->url(id, Database::UrlLarge),
-        m_database->url(id, Database::UrlSmall),
+        *m_model,
+        index,
         m_networkManager
     );
 

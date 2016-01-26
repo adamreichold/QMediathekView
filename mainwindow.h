@@ -28,8 +28,8 @@ public:
 signals:
     void databaseUpdateRequested();
 
-    void playRequested(const quintptr id);
-    void downloadRequested(const quintptr id);
+    void playRequested(const QModelIndex& index);
+    void downloadRequested(const QModelIndex& index);
 
 public slots:
     void showStartedMirrorListUpdate();

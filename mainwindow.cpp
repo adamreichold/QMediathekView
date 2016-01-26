@@ -242,23 +242,23 @@ void MainWindow::editSettingsPressed()
 
 void MainWindow::activated(const QModelIndex& index)
 {
-    emit playRequested(index.internalId());
+    emit playRequested(index);
 }
 
 void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /* previous */)
 {
     m_descriptionEdit->setPlainText(m_model.description(current));
-    m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current).toString()));
+    m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current)));
 }
 
 void MainWindow::playPressed()
 {
-    emit playRequested(m_tableView->currentIndex().internalId());
+    emit playRequested(m_tableView->currentIndex());
 }
 
 void MainWindow::downloadPressed()
 {
-    emit downloadRequested(m_tableView->currentIndex().internalId());
+    emit downloadRequested(m_tableView->currentIndex());
 }
 
 } // Mediathek

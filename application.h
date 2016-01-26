@@ -36,8 +36,8 @@ signals:
     void failedToUpdateDatabase(const QString& error);
 
 public slots:
-    void play(const quintptr id);
-    void download(const quintptr id);
+    void play(const QModelIndex& index);
+    void download(const QModelIndex& index);
 
     void checkUpdateMirrorList();
     void checkUpdateDatabase();

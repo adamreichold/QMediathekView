@@ -2,6 +2,9 @@
 #define MODEL_H
 
 #include <QAbstractTableModel>
+#include <QCache>
+
+#include "schema.h"
 
 namespace Mediathek
 {
@@ -34,21 +37,24 @@ protected:
     void fetchMore(const QModelIndex& parent) override;
 
 public:
+    QString title(const QModelIndex& index) const;
+
+    QString description(const QModelIndex& index) const;
+    QString website(const QModelIndex& index) const;
+
+    QString url(const QModelIndex& index) const;
+    QString urlSmall(const QModelIndex& index) const;
+    QString urlLarge(const QModelIndex& index) const;
+
     QStringList channels() const;
     QStringList topics() const;
     QStringList topics(const QString& channel) const;
-
-    QString description(const QModelIndex& index) const;
-    QUrl website(const QModelIndex& index) const;
 
 public slots:
     void reset();
 
 private:
     const Database& m_database;
-
-    QVector< quintptr > m_id;
-    int m_fetched = 0;
 
     QString m_channel;
     QString m_topic;
@@ -57,7 +63,12 @@ private:
     int m_sortColumn = -1;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
 
-    void update();
+    QVector< quintptr > m_id;
+    int m_fetched = 0;
+    mutable QCache< quintptr, Show > m_cache;
+
+    void fetchId();
+    Show fetchShow(const quintptr id) const;
 
 };
 

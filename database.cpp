@@ -62,29 +62,6 @@ private:
 class Query
 {
 public:
-    class Value
-    {
-    private:
-        friend class Query;
-
-        explicit Value(const QVariant& value) :
-            m_value(value)
-        {
-        }
-
-    public:
-        template< typename T >
-        operator T() const
-        {
-            return m_value.value< T >();
-        }
-
-    private:
-        const QVariant m_value;
-
-    };
-
-public:
     Query(QSqlDatabase& database)
         : m_query(database)
         , m_bindValueIndex(0)
@@ -141,9 +118,10 @@ public:
         return m_query.next();
     }
 
-    Value nextValue()
+    template< typename T >
+    T nextValue()
     {
-        return Value(m_query.value(m_valueIndex++));
+        return m_query.value(m_valueIndex++).value< T >();
     }
 
 private:
@@ -154,76 +132,6 @@ private:
     int m_valueIndex;
 
 };
-
-template< typename Field >
-Field queryField(QSqlDatabase& database, const QString& field, const quintptr id)
-{
-    try
-    {
-        Query query(database);
-
-        query.exec(QStringLiteral("SELECT %1 FROM shows WHERE rowid = %2").arg(field).arg(id));
-
-        if (query.nextRecord())
-        {
-            return query.nextValue();
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return {};
-}
-
-template< typename Field >
-QList< Field > queryFieldRange(QSqlDatabase& database, const QString& field)
-{
-    QList< Field > range;
-
-    try
-    {
-        Query query(database);
-
-        query.exec(QStringLiteral("SELECT DISTINCT(%1) FROM shows").arg(field));
-
-        while (query.nextRecord())
-        {
-            range.push_back(query.nextValue());
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return range;
-}
-
-namespace Fields
-{
-
-#define DEFINE_FIELD(name) const auto name = QStringLiteral(#name)
-
-DEFINE_FIELD(channel);
-DEFINE_FIELD(topic);
-DEFINE_FIELD(title);
-
-DEFINE_FIELD(date);
-DEFINE_FIELD(time);
-DEFINE_FIELD(duration);
-
-DEFINE_FIELD(description);
-DEFINE_FIELD(website);
-
-DEFINE_FIELD(url);
-DEFINE_FIELD(urlSmall);
-DEFINE_FIELD(urlLarge);
-
-#undef DEFINE_FIELD
-
-}
 
 } // anonymous
 
@@ -279,7 +187,7 @@ Database::~Database()
 {
 }
 
-QVector< quintptr > Database::id(
+QVector< quintptr > Database::fetchId(
     const QString& channel, const QString& topic, const QString& title,
     const SortField sortField, const Qt::SortOrder sortOrder
 ) const
@@ -351,7 +259,7 @@ QVector< quintptr > Database::id(
 
         while (query.nextRecord())
         {
-            id.push_back(query.nextValue());
+            id.append(query.nextValue< quintptr >());
         }
     }
     catch (QSqlError& error)
@@ -362,14 +270,83 @@ QVector< quintptr > Database::id(
     return id;
 }
 
+Show Database::fetchShow(const quintptr id) const
+{
+    Show show;
+
+    try
+    {
+        Query query(m_database);
+
+        query.exec(QStringLiteral("SELECT * FROM shows WHERE rowid = %2").arg(id));
+
+        if (query.nextRecord())
+        {
+            show.channel = query.nextValue< QString >();
+            show.topic = query.nextValue< QString >();
+            show.title = query.nextValue< QString >();
+            show.date =  QDate::fromJulianDay(query.nextValue< qint64 >());
+            show.time = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+            show.duration = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+            show.description = query.nextValue< QString >();
+            show.website = query.nextValue< QString >();
+            show.url = query.nextValue< QString >();
+            show.urlSmall = query.nextValue< QString >();
+            show.urlLarge = query.nextValue< QString >();
+        }
+    }
+    catch (QSqlError& error)
+    {
+        qDebug() << error;
+    }
+
+    return show;
+}
+
 QStringList Database::channels() const
 {
-    return queryFieldRange< QString >(m_database, Fields::channel);
+    QStringList channels;
+
+    try
+    {
+        Query query(m_database);
+
+        query.exec(QStringLiteral("SELECT DISTINCT(channel) FROM shows"));
+
+        while (query.nextRecord())
+        {
+            channels.append(query.nextValue< QString >());
+        }
+    }
+    catch (QSqlError& error)
+    {
+        qDebug() << error;
+    }
+
+    return channels;
 }
 
 QStringList Database::topics() const
 {
-    return queryFieldRange< QString >(m_database, Fields::topic);
+    QStringList topics;
+
+    try
+    {
+        Query query(m_database);
+
+        query.exec(QStringLiteral("SELECT DISTINCT(topic) FROM shows"));
+
+        while (query.nextRecord())
+        {
+            topics.append(query.nextValue< QString >());
+        }
+    }
+    catch (QSqlError& error)
+    {
+        qDebug() << error;
+    }
+
+    return topics;
 }
 
 QStringList Database::topics(const QString& channel) const
@@ -391,7 +368,7 @@ QStringList Database::topics(const QString& channel) const
 
         while (query.nextRecord())
         {
-            topics.push_back(query.nextValue());
+            topics.append(query.nextValue< QString >());
         }
     }
     catch (QSqlError& error)
@@ -400,60 +377,6 @@ QStringList Database::topics(const QString& channel) const
     }
 
     return topics;
-}
-
-QString Database::channel(const quintptr id) const
-{
-    return queryField< QString >(m_database, Fields::channel, id);
-}
-
-QString Database::topic(const quintptr id) const
-{
-    return queryField< QString >(m_database, Fields::topic, id);
-}
-
-QString Database::title(const quintptr id) const
-{
-    return queryField< QString >(m_database, Fields::title, id);
-}
-
-QDate Database::date(const quintptr id) const
-{
-    return QDate::fromJulianDay(queryField< qint64 >(m_database, Fields::date, id));
-}
-
-QTime Database::time(const quintptr id) const
-{
-    return QTime::fromMSecsSinceStartOfDay(queryField< int >(m_database, Fields::time, id));
-}
-
-QTime Database::duration(const quintptr id) const
-{
-    return QTime::fromMSecsSinceStartOfDay(queryField< int >(m_database, Fields::duration, id));
-}
-
-QString Database::description(const quintptr id) const
-{
-    return queryField< QString >(m_database, Fields::description, id);
-}
-
-QUrl Database::website(const quintptr id) const
-{
-    return queryField< QString >(m_database, Fields::website, id);
-}
-
-QUrl Database::url(const quintptr id, const Database::UrlKind kind) const
-{
-    switch (kind)
-    {
-    default:
-    case UrlDefault:
-        return queryField< QString >(m_database, Fields::url, id);
-    case UrlSmall:
-        return queryField< QString >(m_database, Fields::urlSmall, id);
-    case UrlLarge:
-        return queryField< QString >(m_database, Fields::urlLarge, id);
-    }
 }
 
 void Database::update(const QByteArray& data)

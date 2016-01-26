@@ -2,11 +2,20 @@
 
 #include "database.h"
 
+namespace
+{
+
+constexpr auto cacheSize = 2048;
+constexpr auto fetchSize = 256;
+
+} // anonymous
+
 namespace Mediathek
 {
 
 Model::Model(Database& database, QObject* parent) : QAbstractTableModel(parent),
-    m_database(database)
+    m_database(database),
+    m_cache(cacheSize)
 {
     reset();
 }
@@ -104,17 +113,17 @@ QVariant Model::data(const QModelIndex& index, int role) const
     switch (section)
     {
     case 0:
-        return m_database.channel(id);
+        return fetchShow(id).channel;
     case 1:
-        return m_database.topic(id);
+        return fetchShow(id).topic;
     case 2:
-        return m_database.title(id);
+        return fetchShow(id).title;
     case 3:
-        return m_database.date(id).toString(QStringLiteral("dd.MM.yy"));
+        return fetchShow(id).date.toString(tr("dd.MM.yy"));
     case 4:
-        return m_database.time(id).toString(QStringLiteral("hh:mm"));
+        return fetchShow(id).time.toString(tr("hh:mm"));
     case 5:
-        return m_database.duration(id).toString(QStringLiteral("hh:mm:ss"));
+        return fetchShow(id).duration.toString(tr("hh:mm:ss"));
     default:
         return {};
     }
@@ -133,7 +142,7 @@ void Model::filter(const QString& channel, const QString& topic, const QString& 
     m_topic = topic;
     m_title = title;
 
-    update();
+    fetchId();
 
     endResetModel();
 }
@@ -155,7 +164,7 @@ void Model::sort(int column, Qt::SortOrder order)
     m_sortColumn = column;
     m_sortOrder = order;
 
-    update();
+    fetchId();
 
     endResetModel();
 }
@@ -177,13 +186,73 @@ void Model::fetchMore(const QModelIndex& parent)
         return;
     }
 
-    const auto fetch = qMin(256, m_id.size() - m_fetched);
+    const auto fetch = qMin(fetchSize, m_id.size() - m_fetched);
 
     beginInsertRows({}, m_fetched, m_fetched + fetch - 1);
 
     m_fetched += fetch;
 
     endInsertRows();
+}
+
+QString Model::title(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).title;
+}
+
+QString Model::description(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).description;
+}
+
+QString Model::website(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).website;
+}
+
+QString Model::url(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).url;
+}
+
+QString Model::urlSmall(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).urlSmall;
+}
+
+QString Model::urlLarge(const QModelIndex& index) const
+{
+    if (!index.isValid())
+    {
+        return {};
+    }
+
+    return fetchShow(index.internalId()).urlLarge;
 }
 
 QStringList Model::channels() const
@@ -201,26 +270,6 @@ QStringList Model::topics(const QString& channel) const
     return m_database.topics(channel);
 }
 
-QString Model::description(const QModelIndex& index) const
-{
-    if (!index.isValid())
-    {
-        return {};
-    }
-
-    return m_database.description(index.internalId());
-}
-
-QUrl Model::website(const QModelIndex& index) const
-{
-    if (!index.isValid())
-    {
-        return {};
-    }
-
-    return m_database.website(index.internalId());
-}
-
 void Model::reset()
 {
     beginResetModel();
@@ -232,12 +281,12 @@ void Model::reset()
     m_sortColumn = 0;
     m_sortOrder = Qt::AscendingOrder;
 
-    update();
+    fetchId();
 
     endResetModel();
 }
 
-void Model::update()
+void Model::fetchId()
 {
     Database::SortField sortField;
 
@@ -264,11 +313,29 @@ void Model::update()
         break;
     }
 
-    m_id = m_database.id(
+    m_id = m_database.fetchId(
                m_channel, m_topic, m_title,
                sortField, m_sortOrder
            );
     m_fetched = 0;
+}
+
+Show Model::fetchShow(const quintptr id) const
+{
+    Show show;
+
+    if (const auto object = m_cache.object(id))
+    {
+        show = *object;
+    }
+    else
+    {
+        show = m_database.fetchShow(id);
+
+        m_cache.insert(id, new Show(show));
+    }
+
+    return show;
 }
 
 } // Mediathek

@@ -7,6 +7,8 @@
 #include <QTime>
 #include <QUrl>
 
+#include "schema.h"
+
 namespace Mediathek
 {
 
@@ -32,34 +34,16 @@ public:
         SortByDuration
     };
 
-    QVector< quintptr > id(
+    QVector< quintptr > fetchId(
         const QString& channel, const QString& topic, const QString& title,
         const SortField sortField, const Qt::SortOrder sortOrder
     ) const;
 
+    Show fetchShow(const quintptr id) const;
+
     QStringList channels() const;
     QStringList topics() const;
     QStringList topics(const QString& channel) const;
-
-    QString channel(const quintptr id) const;
-    QString topic(const quintptr id) const;
-    QString title(const quintptr id) const;
-
-    QDate date(const quintptr id) const;
-    QTime time(const quintptr id) const;
-    QTime duration(const quintptr id) const;
-
-    QString description(const quintptr id) const;
-    QUrl website(const quintptr id) const;
-
-    enum UrlKind
-    {
-        UrlDefault,
-        UrlSmall,
-        UrlLarge
-    };
-
-    QUrl url(const quintptr id, const UrlKind kind) const;
 
 signals:
     void updated();

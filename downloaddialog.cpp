@@ -13,30 +13,28 @@
 #include <QRadioButton>
 
 #include "settings.h"
+#include "model.h"
 
 namespace Mediathek
 {
 
 DownloadDialog::DownloadDialog(
     const Settings& settings,
-    const QString& title,
-    const QUrl& url,
-    const QUrl& urlLarge,
-    const QUrl& urlSmall,
+    const Model& model,
+    const QModelIndex& index,
     QNetworkAccessManager* networkManager,
     QWidget* parent
 )
     : QDialog(parent)
     , m_settings(settings)
-    , m_title(title)
-    , m_url(url)
-    , m_urlLarge(urlLarge)
-    , m_urlSmall(urlSmall)
+    , m_url(model.url(index))
+    , m_urlLarge(model.urlLarge(index))
+    , m_urlSmall(model.urlSmall(index))
     , m_networkManager(networkManager)
     , m_networkReply(nullptr)
     , m_file(nullptr)
 {
-    setWindowTitle(tr("Download '%1'").arg(m_title));
+    setWindowTitle(tr("Download '%1'").arg(model.title(index)));
 
     const auto layout = new QGridLayout(this);
     setLayout(layout);
@@ -213,7 +211,7 @@ void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
     m_progressBar->setMaximum(bytesTotal);
 }
 
-const QUrl& DownloadDialog::selectedUrl() const
+QUrl DownloadDialog::selectedUrl() const
 {
     if (m_largeButton->isChecked())
     {

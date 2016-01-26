@@ -16,6 +16,7 @@ namespace Mediathek
 {
 
 class Settings;
+class Model;
 
 class DownloadDialog : public QDialog
 {
@@ -25,10 +26,8 @@ class DownloadDialog : public QDialog
 public:
     DownloadDialog(
         const Settings& settings,
-        const QString& title,
-        const QUrl& url,
-        const QUrl& urlLarge,
-        const QUrl& urlSmall,
+        const Model& model,
+        const QModelIndex& index,
         QNetworkAccessManager* networkManager,
         QWidget* parent = 0
     );
@@ -48,12 +47,11 @@ private slots:
 private:
     const Settings& m_settings;
 
-    const QString m_title;
-    const QUrl m_url;
-    const QUrl m_urlLarge;
-    const QUrl m_urlSmall;
+    const QString m_url;
+    const QString m_urlLarge;
+    const QString m_urlSmall;
 
-    const QUrl& selectedUrl() const;
+    QUrl selectedUrl() const;
 
     QNetworkAccessManager* m_networkManager;
     QNetworkReply* m_networkReply;
