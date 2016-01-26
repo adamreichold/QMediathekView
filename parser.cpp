@@ -148,6 +148,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
     Rule< void() > websiteItem;
     Rule< void() > urlItem, urlSmallItem, urlLargeItem;
 
+    Rule< void() > ignoredItem;
     Rule< void() > emptyItem;
     Rule< std::string() > textItem;
     Rule< boost::fusion::vector< int, std::string >() > textReplacementItem;
@@ -179,6 +180,11 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
                          | (lit("\\r") >> attr('\r'))
                          | (lit("\\t") >> attr('\t')));
 
+        ignoredItem %= lexeme[eps
+                >> lit('"')
+                >> *(~char_("\\\"") | (lit('\\') >> char_("\\\"bfnrt")))
+                >> lit('"')];
+
         emptyItem %= lit("\"\"");
 
         textItem %= lexeme[eps
@@ -205,13 +211,13 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 
         channelTopicTitleItems %= eps
                 >> textItem[bind(&Grammar::setChannel, this, _1)] >> lit(',')
-                                                                  >> textItem[bind(&Grammar::setTopic, this, _1)] >> lit(',')
-                                                                  >> textItem[bind(&Grammar::setTitle, this, _1)];
+                >> textItem[bind(&Grammar::setTopic, this, _1)] >> lit(',')
+                >> textItem[bind(&Grammar::setTitle, this, _1)];
 
         dateTimeDurationItems %= eps
                 >> (dateItem[bind(&Grammar::setDate, this, _1)] | emptyItem[bind(&Grammar::resetDate, this)]) >> lit(',')
-                                                                                                              >> (timeItem[bind(&Grammar::setTime, this, _1)] | emptyItem[bind(&Grammar::resetTime, this)]) >> lit(',')
-                                                                                                                                                                                                            >> (timeItem[bind(&Grammar::setDuration, this, _1)] | emptyItem[bind(&Grammar::resetDuration, this)]);
+                >> (timeItem[bind(&Grammar::setTime, this, _1)] | emptyItem[bind(&Grammar::resetTime, this)]) >> lit(',')
+                >> (timeItem[bind(&Grammar::setDuration, this, _1)] | emptyItem[bind(&Grammar::resetDuration, this)]);
 
         descriptionItem %= textItem[bind(&Grammar::setDescription, this, _1)];
 
@@ -224,7 +230,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         headerList %= lit("\"Filmliste\"")
                 >> lit(':')
                 >> lit('[')
-                >> textItem % lit(',')
+                >> ignoredItem % lit(',')
                 >> lit(']');
 
         entryList %= lit("\"X\"")
@@ -232,16 +238,16 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
                 >> lit('[')
                 >> channelTopicTitleItems >> lit(',')
                 >> dateTimeDurationItems >> lit(',')
-                >> textItem >> lit(',')
+                >> ignoredItem >> lit(',')
                 >> descriptionItem >> lit(',')
                 >> urlItem >> lit(',')
                 >> websiteItem >> lit(',')
-                >> textItem >> lit(',')
-                >> textItem >> lit(',')
+                >> ignoredItem >> lit(',')
+                >> ignoredItem >> lit(',')
                 >> urlSmallItem >> lit(',')
-                >> textItem >> lit(',')
+                >> ignoredItem >> lit(',')
                 >> urlLargeItem >> lit(',')
-                >> textItem % lit(',')
+                >> ignoredItem % lit(',')
                 >> lit(']');
 
         start %= eps
@@ -263,9 +269,9 @@ namespace Mediathek
 
 bool parse(const QByteArray& data, const Inserter& inserter)
 {
-    Grammar< QByteArray::const_iterator, boost::spirit::qi::space_type > grammar(inserter);
+    Grammar< QByteArray::const_iterator, boost::spirit::ascii::space_type > grammar(inserter);
 
-    return boost::spirit::qi::phrase_parse(data.begin(), data.end(), grammar, boost::spirit::qi::space);
+    return boost::spirit::qi::phrase_parse(data.begin(), data.end(), grammar, boost::spirit::ascii::space);
 }
 
 } // Mediathek
