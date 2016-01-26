@@ -22,11 +22,8 @@ public:
     ~Database();
 
 public:
-    QVector< quintptr > id() const;
-
     enum SortField
     {
-        SortDefault,
         SortByChannel,
         SortByTopic,
         SortByTitle,

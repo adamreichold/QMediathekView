@@ -122,6 +122,11 @@ QVariant Model::data(const QModelIndex& index, int role) const
 
 void Model::filter(const QString& channel, const QString& topic, const QString& title)
 {
+    if (m_channel == channel && m_topic == topic && m_title == title)
+    {
+        return;
+    }
+
     beginResetModel();
 
     m_channel = channel;
@@ -136,6 +141,11 @@ void Model::filter(const QString& channel, const QString& topic, const QString& 
 void Model::sort(int column, Qt::SortOrder order)
 {
     if (column < 0 || column >= 6)
+    {
+        return;
+    }
+
+    if (m_sortColumn == column && m_sortOrder == order)
     {
         return;
     }
@@ -219,21 +229,21 @@ void Model::reset()
     m_topic.clear();
     m_title.clear();
 
-    m_sortColumn = -1;
+    m_sortColumn = 0;
     m_sortOrder = Qt::AscendingOrder;
 
-    m_id = m_database.id();
-    m_fetched = 0;
+    update();
 
     endResetModel();
 }
 
 void Model::update()
 {
-    Database::SortField sortField = Database::SortDefault;
+    Database::SortField sortField;
 
     switch (m_sortColumn)
     {
+    default:
     case 0:
         sortField = Database::SortByChannel;
         break;

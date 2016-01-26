@@ -47,8 +47,8 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     setCentralWidget(m_tableView);
 
     m_tableView->setAlternatingRowColors(true);
-    m_tableView->setSortingEnabled(true);
     m_tableView->sortByColumn(0, Qt::AscendingOrder);
+    m_tableView->setSortingEnabled(true);
     m_tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);

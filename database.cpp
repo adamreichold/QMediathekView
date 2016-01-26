@@ -279,32 +279,6 @@ Database::~Database()
 {
 }
 
-QVector< quintptr > Database::id() const
-{
-    QVector< quintptr > id;
-
-    try
-    {
-        Query query(m_database);
-
-        query.exec(QStringLiteral(
-                       "SELECT rowid FROM shows"
-                       " ORDER BY channel, date DESC, time DESC"
-                   ));
-
-        while (query.nextRecord())
-        {
-            id.push_back(query.nextValue());
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return id;
-}
-
 QVector< quintptr > Database::id(
     const QString& channel, const QString& topic, const QString& title,
     const SortField sortField, const Qt::SortOrder sortOrder
@@ -329,9 +303,6 @@ QVector< quintptr > Database::id(
     switch (sortField)
     {
     default:
-    case SortDefault:
-        sortClause = QStringLiteral("channel, date DESC, time DESC");
-        break;
     case SortByChannel:
         sortClause = QStringLiteral("channel %1, date DESC, time DESC").arg(sortOrderClause);
         break;
