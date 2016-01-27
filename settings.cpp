@@ -25,6 +25,8 @@ DEFINE_KEY(databaseUpdatedOn);
 DEFINE_KEY(playCommand);
 DEFINE_KEY(downloadFolder);
 
+DEFINE_KEY(preferredUrl);
+
 DEFINE_KEY(mainWindowGeometry);
 DEFINE_KEY(mainWindowState);
 
@@ -40,6 +42,8 @@ constexpr auto databaseUpdateAfterHours = 3;
 
 const auto playCommand = QStringLiteral("vlc %1");
 const auto downloadFolder = QDir::homePath();
+
+constexpr auto preferredUrl = Url::Default;
 
 const auto userAgent = QStringLiteral("QMediathekView");
 
@@ -137,6 +141,16 @@ QDir Settings::downloadFolder() const
 void Settings::setDownloadFolder(const QDir& folder)
 {
     m_settings->setValue(Keys::downloadFolder, folder.absolutePath());
+}
+
+Url Settings::preferredUrl() const
+{
+    return Url(m_settings->value(Keys::preferredUrl, int(Defaults::preferredUrl)).toInt());
+}
+
+void Settings::setPreferredUrl(const Url type)
+{
+    m_settings->setValue(Keys::preferredUrl, int(type));
 }
 
 QByteArray Settings::mainWindowGeometry() const

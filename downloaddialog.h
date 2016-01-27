@@ -60,8 +60,8 @@ private:
     QLineEdit* m_filePathEdit;
 
     QRadioButton* m_defaultButton;
-    QRadioButton* m_largeButton;
     QRadioButton* m_smallButton;
+    QRadioButton* m_largeButton;
 
     QPushButton* m_startButton;
     QPushButton* m_cancelButton;

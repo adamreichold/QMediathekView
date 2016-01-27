@@ -3,6 +3,7 @@
 
 #include <QDialog>
 
+class QComboBox;
 class QLineEdit;
 class QSpinBox;
 
@@ -34,6 +35,8 @@ private:
 
     QLineEdit* m_playCommandEdit;
     QLineEdit* m_downloadFolderEdit;
+
+    QComboBox* m_preferredUrlBox;
 
 };
 

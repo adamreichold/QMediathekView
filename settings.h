@@ -6,6 +6,8 @@
 #include <QObject>
 #include <QStringList>
 
+#include "schema.h"
+
 class QSettings;
 
 namespace Mediathek
@@ -44,6 +46,9 @@ public:
 
     QDir downloadFolder() const;
     void setDownloadFolder(const QDir& folder);
+
+    Url preferredUrl() const;
+    void setPreferredUrl(const Url type);
 
     QByteArray mainWindowGeometry() const;
     void setMainWindowGeometry(const QByteArray& geometry);

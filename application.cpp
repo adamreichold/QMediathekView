@@ -7,6 +7,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QMessageBox>
 #include <QProcess>
 #include <QTimer>
 #include <QUrl>
@@ -137,19 +138,43 @@ int Application::exec()
 
 void Application::play(const QModelIndex& index)
 {
-    auto url = m_model->url(index);
+    auto firstUrl = &Model::url;
+    auto secondUrl = &Model::urlSmall;
+    auto thirdUrl = &Model::urlLarge;
+
+    switch (m_settings->preferredUrl())
+    {
+    default:
+    case Url::Default:
+        break;
+    case Url::Small:
+        firstUrl = &Model::urlSmall;
+        secondUrl = &Model::url;
+        thirdUrl = &Model::urlLarge;
+        break;
+    case Url::Large:
+        firstUrl = &Model::urlLarge;
+        secondUrl = &Model::url;
+        thirdUrl = &Model::urlSmall;
+        break;
+    }
+
+    auto url = (m_model->*firstUrl)(index);
 
     if (url.isEmpty())
     {
-        url = m_model->urlLarge(index);
+        url = (m_model->*secondUrl)(index);
     }
 
     if (url.isEmpty())
     {
-        url = m_model->urlSmall(index);
+        url = (m_model->*thirdUrl)(index);
     }
 
-    QProcess::startDetached(m_settings->playCommand().arg(url));
+    if (!QProcess::startDetached(m_settings->playCommand().arg(url)))
+    {
+        QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
+    }
 }
 
 void Application::download(const QModelIndex& index)

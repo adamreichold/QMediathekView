@@ -54,11 +54,11 @@ DownloadDialog::DownloadDialog(
     m_defaultButton = new QRadioButton(tr("Default"), this);
     layout->addWidget(m_defaultButton, 1, 2);
 
-    m_largeButton = new QRadioButton(tr("Large"), this);
-    layout->addWidget(m_largeButton, 1, 3);
-
     m_smallButton = new QRadioButton(tr("Small"), this);
-    layout->addWidget(m_smallButton, 1, 4);
+    layout->addWidget(m_smallButton, 1, 3);
+
+    m_largeButton = new QRadioButton(tr("Large"), this);
+    layout->addWidget(m_largeButton, 1, 4);
 
     const auto buttonsWidget = new QWidget(this);
     layout->addWidget(buttonsWidget, 3, 2, 1, 3);
@@ -81,20 +81,41 @@ DownloadDialog::DownloadDialog(
     layout->addWidget(m_progressBar, 4, 0, 1, 5);
 
     m_defaultButton->setDisabled(m_url.isEmpty());
-    m_largeButton->setDisabled(m_urlLarge.isEmpty());
     m_smallButton->setDisabled(m_urlSmall.isEmpty());
+    m_largeButton->setDisabled(m_urlLarge.isEmpty());
 
-    if (m_defaultButton->isEnabled())
+    auto firstButton = m_defaultButton;
+    auto secondButton = m_smallButton;
+    auto thirdButton = m_largeButton;
+
+    switch (m_settings.preferredUrl())
     {
-        m_defaultButton->setChecked(true);
+    default:
+    case Url::Default:
+        break;
+    case Url::Small:
+        firstButton = m_smallButton;
+        secondButton = m_defaultButton;
+        thirdButton = m_largeButton;
+        break;
+    case Url::Large:
+        firstButton = m_largeButton;
+        secondButton = m_defaultButton;
+        thirdButton = m_smallButton;
+        break;
     }
-    else if (m_largeButton->isEnabled())
+
+    if (firstButton->isEnabled())
     {
-        m_largeButton->setChecked(true);
+        firstButton->setChecked(true);
     }
-    else if (m_smallButton->isEnabled())
+    else if (secondButton->isEnabled())
     {
-        m_smallButton->setChecked(true);
+        secondButton->setChecked(true);
+    }
+    else if (thirdButton->isEnabled())
+    {
+        thirdButton->setChecked(true);
     }
     else
     {
@@ -213,14 +234,14 @@ void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 
 QUrl DownloadDialog::selectedUrl() const
 {
-    if (m_largeButton->isChecked())
-    {
-        return m_urlLarge;
-    }
-
     if (m_smallButton->isChecked())
     {
         return m_urlSmall;
+    }
+
+    if (m_largeButton->isChecked())
+    {
+        return m_urlLarge;
     }
 
     return m_url;

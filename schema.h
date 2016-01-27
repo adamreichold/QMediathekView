@@ -26,6 +26,14 @@ struct Show
 
 };
 
+enum class Url : int
+{
+    Default,
+    Small,
+    Large
+
+};
+
 } // Mediathek
 
 #endif // SCHEMA_H

@@ -1,6 +1,7 @@
 #include "settingsdialog.h"
 
 #include <QAction>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -47,6 +48,13 @@ SettingsDialog::SettingsDialog(
     const auto selectDownloadFolderAction = m_downloadFolderEdit->addAction(QIcon::fromTheme(QStringLiteral("document-open")), QLineEdit::TrailingPosition);
     connect(selectDownloadFolderAction, &QAction::triggered, this, &SettingsDialog::selectDownloadFolder);
 
+    m_preferredUrlBox = new QComboBox(this);
+    m_preferredUrlBox->addItem(tr("Default"), int(Url::Default));
+    m_preferredUrlBox->addItem(tr("Small"), int(Url::Small));
+    m_preferredUrlBox->addItem(tr("Large"), int(Url::Large));
+    m_preferredUrlBox->setCurrentIndex(m_preferredUrlBox->findData(int(m_settings.preferredUrl())));
+    layout->addRow(tr("Preferred URL"), m_preferredUrlBox);
+
     auto buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     layout->addWidget(buttonBox);
 
@@ -67,6 +75,8 @@ void SettingsDialog::accept()
 
     m_settings.setPlayCommand(m_playCommandEdit->text());
     m_settings.setDownloadFolder(m_downloadFolderEdit->text());
+
+    m_settings.setPreferredUrl(Url(m_preferredUrlBox->currentData().toInt()));
 }
 
 void SettingsDialog::selectDownloadFolder()
