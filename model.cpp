@@ -362,14 +362,22 @@ void Model::fetchChannels()
 {
     auto channels = m_database.channels();
     channels.prepend(QString());
-    m_channels->setStringList(channels);
+
+    if (m_channels->stringList() != channels)
+    {
+        m_channels->setStringList(channels);
+    }
 }
 
 void Model::fetchTopics()
 {
     auto topics = m_database.topics(m_channel);
     topics.prepend(QString());
-    m_topics->setStringList(topics);
+
+    if (m_topics->stringList() != topics)
+    {
+        m_topics->setStringList(topics);
+    }
 }
 
 } // Mediathek
