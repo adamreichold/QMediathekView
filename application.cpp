@@ -26,7 +26,8 @@ namespace
 using namespace Mediathek;
 
 const auto updateInterval = 60 * 60 * 1000;
-const auto mirrorListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
+const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
+const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
 
 namespace Tags
 {
@@ -101,9 +102,9 @@ Application::Application(int& argc, char** argv)
 
     connect(m_database, &Database::updated, m_model, &Model::update);
 
-    connect(this, &Application::startedMirrorListUpdate, m_mainWindow, &MainWindow::showStartedMirrorListUpdate);
-    connect(this, &Application::completedMirrorListUpdate, m_mainWindow, &MainWindow::showCompletedMirrorListUpdate);
-    connect(this, &Application::failedToUpdateMirrorList, m_mainWindow, &MainWindow::showMirrorListUpdateFailure);
+    connect(this, &Application::startedMirrorsUpdate, m_mainWindow, &MainWindow::showStartedMirrorsUpdate);
+    connect(this, &Application::completedMirrorsUpdate, m_mainWindow, &MainWindow::showCompletedMirrorsUpdate);
+    connect(this, &Application::failedToUpdateMirrors, m_mainWindow, &MainWindow::showMirrorsUpdateFailure);
 
     connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
     connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
@@ -121,7 +122,7 @@ Application::~Application()
 
 int Application::exec()
 {
-    QTimer::singleShot(0, this, &Application::checkUpdateMirrorList);
+    QTimer::singleShot(0, this, &Application::checkUpdateMirrors);
 
     m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
     m_mainWindow->show();
@@ -182,15 +183,15 @@ void Application::download(const QModelIndex& index)
     dialog->show();
 }
 
-void Application::checkUpdateMirrorList()
+void Application::checkUpdateMirrors()
 {
-    const auto updateAfter = m_settings->mirrorListUpdateAfterDays();
-    const auto updatedOn = m_settings->mirrorListUpdatedOn();
+    const auto updateAfter = m_settings->mirrorsUpdateAfterDays();
+    const auto updatedOn = m_settings->mirrorsUpdatedOn();
     const auto updatedBefore = updatedOn.daysTo(QDateTime::currentDateTime());
 
     if (!updatedOn.isValid() || updateAfter < updatedBefore)
     {
-        updateMirrorList();
+        updateMirrors();
     }
     else
     {
@@ -210,62 +211,23 @@ void Application::checkUpdateDatabase()
     }
 }
 
-void Application::updateMirrorList()
+void Application::updateMirrors()
 {
-    emit startedMirrorListUpdate();
+    emit startedMirrorsUpdate();
 
-    QNetworkRequest request(mirrorListUrl);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::finished, [this, reply]()
+    downloadMirrors(fullListUrl, [this](const QStringList& mirrors)
     {
-        reply->deleteLater();
+        m_settings->setFullListMirrors(mirrors);
 
-        if (reply->error())
+        downloadMirrors(partialListUrl, [this](const QStringList& mirrors)
         {
-            emit failedToUpdateMirrorList(reply->errorString());
-            return;
-        }
+            m_settings->setPartialListMirrors(mirrors);
+            m_settings->setMirrorsUpdatedOn();
 
-        QDomDocument document;
-        document.setContent(reply);
+            emit completedMirrorsUpdate();
 
-        const auto root = document.documentElement();
-        if (root.tagName() != Tags::root)
-        {
-            emit failedToUpdateMirrorList(tr("Received a malformed mirror list."));
-            return;
-        }
-
-        QStringList mirrorList;
-
-        for (
-            auto server = root.firstChildElement(Tags::server);
-            !server.isNull();
-            server = server.nextSiblingElement(Tags::server))
-        {
-            const auto url = server.firstChildElement(Tags::url).text();
-
-            if (!url.isEmpty())
-            {
-                mirrorList.append(url);
-            }
-        }
-
-        if (mirrorList.isEmpty())
-        {
-            emit failedToUpdateMirrorList(tr("Received an empty mirror list."));
-            return;
-        }
-
-        m_settings->setMirrorList(mirrorList);
-        m_settings->setMirrorListUpdatedOn();
-
-        emit completedMirrorListUpdate();
-
-        QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
+            QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
+        });
     });
 }
 
@@ -273,12 +235,12 @@ void Application::updateDatabase()
 {
     emit startedDatabaseUpdate();
 
-    QNetworkRequest request(randomItem(m_settings->mirrorList()));
+    const auto decompressor = std::make_shared< Decompressor >();
+
+    QNetworkRequest request(randomItem(m_settings->fullListMirrors()));
     request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
 
     const auto reply = m_networkManager->get(request);
-
-    const auto decompressor = std::make_shared< Decompressor >();
 
     connect(reply, &QNetworkReply::readyRead, [this, reply, decompressor]()
     {
@@ -303,6 +265,65 @@ void Application::updateDatabase()
         decompressor->appendData(reply->readAll());
 
         m_database->update(decompressor->data());
+    });
+}
+
+template< typename Consumer >
+void Application::downloadMirrors(const QString& url, const Consumer& consumer)
+{
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
+
+    const auto reply = m_networkManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, [this, consumer, reply]()
+    {
+        reply->deleteLater();
+
+        if (reply->error())
+        {
+            emit failedToUpdateMirrors(reply->errorString());
+            return;
+        }
+
+        QStringList mirrorList;
+
+        {
+            QDomDocument document;
+            document.setContent(reply);
+
+            const auto root = document.documentElement();
+            if (root.tagName() != Tags::root)
+            {
+                emit failedToUpdateMirrors(tr("Received a malformed mirror list."));
+                return;
+            }
+
+
+            {
+                auto server = root.firstChildElement(Tags::server);
+
+                while (!server.isNull())
+                {
+                    const auto url = server.firstChildElement(Tags::url).text();
+
+                    if (!url.isEmpty())
+                    {
+                        mirrorList.append(url);
+                    }
+
+                    server = server.nextSiblingElement(Tags::server);
+                }
+            }
+        }
+
+        if (mirrorList.isEmpty())
+        {
+            emit failedToUpdateMirrors(tr("Received an empty mirror list."));
+            return;
+        }
+
+        consumer(mirrorList);
     });
 }
 

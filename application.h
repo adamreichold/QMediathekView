@@ -23,9 +23,9 @@ public:
     ~Application();
 
 signals:
-    void startedMirrorListUpdate();
-    void completedMirrorListUpdate();
-    void failedToUpdateMirrorList(const QString& error);
+    void startedMirrorsUpdate();
+    void completedMirrorsUpdate();
+    void failedToUpdateMirrors(const QString& error);
 
     void startedDatabaseUpdate();
     void completedDatabaseUpdate();
@@ -37,12 +37,15 @@ public:
     void play(const QModelIndex& index);
     void download(const QModelIndex& index);
 
-    void checkUpdateMirrorList();
+    void checkUpdateMirrors();
     void checkUpdateDatabase();
 
 private:
-    void updateMirrorList();
+    void updateMirrors();
     void updateDatabase();
+
+    template< typename Consumer >
+    void downloadMirrors(const QString& url, const Consumer& consumer);
 
 private:
     Settings* m_settings;

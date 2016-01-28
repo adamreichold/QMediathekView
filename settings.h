@@ -26,17 +26,20 @@ public:
     QString userAgent() const;
     void setUserAgent(const QString& userAgent);
 
-    QStringList mirrorList() const;
-    void setMirrorList(const QStringList& mirrorList);
+    QStringList fullListMirrors() const;
+    void setFullListMirrors(const QStringList& mirrors);
 
-    int mirrorListUpdateAfterDays() const;
-    void setMirrorListUpdateAfterDays(int days);
+    QStringList partialListMirrors() const;
+    void setPartialListMirrors(const QStringList& mirrors);
+
+    int mirrorsUpdateAfterDays() const;
+    void setMirrorsUpdateAfterDays(int days);
 
     int databaseUpdateAfterHours() const;
     void setDatabaseUpdateAfterHours(int hours);
 
-    QDateTime mirrorListUpdatedOn() const;
-    void setMirrorListUpdatedOn() const;
+    QDateTime mirrorsUpdatedOn() const;
+    void setMirrorsUpdatedOn() const;
 
     QDateTime databaseUpdatedOn() const;
     void setDatabaseUpdatedOn() const;

@@ -30,7 +30,7 @@ private:
 private:
     Settings& m_settings;
 
-    QSpinBox* m_mirrorListUpdateAfterDaysBox;
+    QSpinBox* m_mirrorsUpdateAfterDaysBox;
     QSpinBox* m_databaseUpdateAfterHoursBox;
 
     QLineEdit* m_playCommandEdit;

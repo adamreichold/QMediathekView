@@ -32,9 +32,9 @@ signals:
     void downloadRequested(const QModelIndex& index);
 
 public:
-    void showStartedMirrorListUpdate();
-    void showCompletedMirrorListUpdate();
-    void showMirrorListUpdateFailure(const QString& error);
+    void showStartedMirrorsUpdate();
+    void showCompletedMirrorsUpdate();
+    void showMirrorsUpdateFailure(const QString& error);
 
     void showStartedDatabaseUpdate();
     void showCompletedDatabaseUpdate();

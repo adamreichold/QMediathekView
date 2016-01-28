@@ -175,17 +175,17 @@ MainWindow::~MainWindow()
     m_settings.setMainWindowState(saveState());
 }
 
-void MainWindow::showStartedMirrorListUpdate()
+void MainWindow::showStartedMirrorsUpdate()
 {
     statusBar()->showMessage(tr("Started mirror list update..."), messageTimeout);
 }
 
-void MainWindow::showCompletedMirrorListUpdate()
+void MainWindow::showCompletedMirrorsUpdate()
 {
     statusBar()->showMessage(tr("Successfully updated mirror list."), messageTimeout);
 }
 
-void MainWindow::showMirrorListUpdateFailure(const QString& error)
+void MainWindow::showMirrorsUpdateFailure(const QString& error)
 {
     statusBar()->showMessage(tr("Failed to updated mirror list: %1").arg(error), errorMessageTimeout);
 }

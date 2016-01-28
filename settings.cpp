@@ -14,12 +14,13 @@ namespace Keys
 
 DEFINE_KEY(userAgent);
 
-DEFINE_KEY(mirrorList);
+DEFINE_KEY(fullListMirrors);
+DEFINE_KEY(partialListMirrors);
 
-DEFINE_KEY(mirrorListUpdateAfterDays);
+DEFINE_KEY(mirrorsUpdateAfterDays);
 DEFINE_KEY(databaseUpdateAfterHours);
 
-DEFINE_KEY(mirrorListUpdatedOn);
+DEFINE_KEY(mirrorsUpdatedOn);
 DEFINE_KEY(databaseUpdatedOn);
 
 DEFINE_KEY(playCommand);
@@ -37,6 +38,8 @@ DEFINE_KEY(mainWindowState);
 namespace Defaults
 {
 
+const auto userAgent = QStringLiteral("QMediathekView");
+
 constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
 
@@ -44,8 +47,6 @@ const auto playCommand = QStringLiteral("vlc %1");
 const auto downloadFolder = QDir::homePath();
 
 constexpr auto preferredUrl = Url::Default;
-
-const auto userAgent = QStringLiteral("QMediathekView");
 
 } // Defaults
 
@@ -73,24 +74,34 @@ void Settings::setUserAgent(const QString& userAgent)
     m_settings->setValue(Keys::userAgent, userAgent);
 }
 
-QStringList Settings::mirrorList() const
+QStringList Settings::fullListMirrors() const
 {
-    return m_settings->value(Keys::mirrorList).toStringList();
+    return m_settings->value(Keys::fullListMirrors).toStringList();
 }
 
-void Settings::setMirrorList(const QStringList& mirrorList)
+void Settings::setFullListMirrors(const QStringList& mirrors)
 {
-    m_settings->setValue(Keys::mirrorList, mirrorList);
+    m_settings->setValue(Keys::fullListMirrors, mirrors);
 }
 
-int Settings::mirrorListUpdateAfterDays() const
+QStringList Settings::partialListMirrors() const
 {
-    return m_settings->value(Keys::mirrorListUpdateAfterDays, Defaults::mirrorListUpdateAfterDays).toInt();
+    return m_settings->value(Keys::partialListMirrors).toStringList();
 }
 
-void Settings::setMirrorListUpdateAfterDays(int days)
+void Settings::setPartialListMirrors(const QStringList& mirrors)
 {
-    m_settings->setValue(Keys::mirrorListUpdateAfterDays, days);
+    m_settings->setValue(Keys::partialListMirrors, mirrors);
+}
+
+int Settings::mirrorsUpdateAfterDays() const
+{
+    return m_settings->value(Keys::mirrorsUpdateAfterDays, Defaults::mirrorListUpdateAfterDays).toInt();
+}
+
+void Settings::setMirrorsUpdateAfterDays(int days)
+{
+    m_settings->setValue(Keys::mirrorsUpdateAfterDays, days);
 }
 
 int Settings::databaseUpdateAfterHours() const
@@ -103,14 +114,14 @@ void Settings::setDatabaseUpdateAfterHours(int hours)
     m_settings->setValue(Keys::databaseUpdateAfterHours, hours);
 }
 
-QDateTime Settings::mirrorListUpdatedOn() const
+QDateTime Settings::mirrorsUpdatedOn() const
 {
-    return m_settings->value(Keys::mirrorListUpdatedOn).toDateTime();
+    return m_settings->value(Keys::mirrorsUpdatedOn).toDateTime();
 }
 
-void Settings::setMirrorListUpdatedOn() const
+void Settings::setMirrorsUpdatedOn() const
 {
-    m_settings->setValue(Keys::mirrorListUpdatedOn, QDateTime::currentDateTime());
+    m_settings->setValue(Keys::mirrorsUpdatedOn, QDateTime::currentDateTime());
 }
 
 QDateTime Settings::databaseUpdatedOn() const
