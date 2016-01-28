@@ -4,6 +4,8 @@
 #include <QAbstractTableModel>
 #include <QCache>
 
+class QStringListModel;
+
 #include "schema.h"
 
 namespace Mediathek
@@ -37,6 +39,10 @@ protected:
     void fetchMore(const QModelIndex& parent) override;
 
 public:
+    QAbstractItemModel* channels() const;
+    QAbstractItemModel* topics() const;
+
+public:
     QString title(const QModelIndex& index) const;
 
     QString description(const QModelIndex& index) const;
@@ -46,12 +52,8 @@ public:
     QString urlSmall(const QModelIndex& index) const;
     QString urlLarge(const QModelIndex& index) const;
 
-    QStringList channels() const;
-    QStringList topics() const;
-    QStringList topics(const QString& channel) const;
-
 public:
-    void reset();
+    void update();
 
 private:
     const Database& m_database;
@@ -69,6 +71,12 @@ private:
 
     void fetchId();
     Show fetchShow(const quintptr id) const;
+
+    QStringListModel* m_channels;
+    QStringListModel* m_topics;
+
+    void fetchChannels();
+    void fetchTopics();
 
 };
 

@@ -40,9 +40,6 @@ public:
     void showCompletedDatabaseUpdate();
     void showDatabaseUpdateFailure(const QString& error);
 
-    void applyFilter();
-    void resetFilter();
-
 private:
     void resetFilterPressed();
     void updateDatabasePressed();
@@ -51,6 +48,7 @@ private:
     void playPressed();
     void downloadPressed();
 
+    void timeout();
     void activated(const QModelIndex& index);
     void currentChanged(const QModelIndex& current, const QModelIndex& previous);
 

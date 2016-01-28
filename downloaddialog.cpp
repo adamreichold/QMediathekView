@@ -23,8 +23,7 @@ DownloadDialog::DownloadDialog(
     const Model& model,
     const QModelIndex& index,
     QNetworkAccessManager* networkManager,
-    QWidget* parent
-)
+    QWidget* parent)
     : QDialog(parent)
     , m_settings(settings)
     , m_url(model.url(index))

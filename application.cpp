@@ -95,13 +95,11 @@ Application::Application(int& argc, char** argv)
     , m_model(new Model(*m_database, this))
     , m_networkManager(new QNetworkAccessManager(this))
     , m_mainWindow(new MainWindow(*m_settings, *m_model))
-    , m_updateTimer(new QTimer(this))
 {
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
     connect(m_database, &Database::failedToUpdate, this, &Application::failedToUpdateDatabase);
 
-    connect(m_database, &Database::updated, m_model, &Model::reset);
-    connect(m_database, &Database::updated, m_mainWindow, &MainWindow::resetFilter);
+    connect(m_database, &Database::updated, m_model, &Model::update);
 
     connect(this, &Application::startedMirrorListUpdate, m_mainWindow, &MainWindow::showStartedMirrorListUpdate);
     connect(this, &Application::completedMirrorListUpdate, m_mainWindow, &MainWindow::showCompletedMirrorListUpdate);
@@ -115,9 +113,6 @@ Application::Application(int& argc, char** argv)
 
     connect(m_mainWindow, &MainWindow::playRequested, this, &Application::play);
     connect(m_mainWindow, &MainWindow::downloadRequested, this, &Application::download);
-
-    connect(m_updateTimer, &QTimer::timeout, this, &Application::checkUpdateMirrorList, Qt::QueuedConnection);
-    connect(this, &Application::completedMirrorListUpdate, this, &Application::checkUpdateDatabase, Qt::QueuedConnection);
 }
 
 Application::~Application()
@@ -126,8 +121,6 @@ Application::~Application()
 
 int Application::exec()
 {
-    m_updateTimer->start(updateInterval);
-
     QTimer::singleShot(0, this, &Application::checkUpdateMirrorList);
 
     m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -183,8 +176,7 @@ void Application::download(const QModelIndex& index)
         *m_settings,
         *m_model,
         index,
-        m_networkManager
-    );
+        m_networkManager);
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -252,8 +244,7 @@ void Application::updateMirrorList()
         for (
             auto server = root.firstChildElement(Tags::server);
             !server.isNull();
-            server = server.nextSiblingElement(Tags::server)
-        )
+            server = server.nextSiblingElement(Tags::server))
         {
             const auto url = server.firstChildElement(Tags::url).text();
 
@@ -273,6 +264,8 @@ void Application::updateMirrorList()
         m_settings->setMirrorListUpdatedOn();
 
         emit completedMirrorListUpdate();
+
+        QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
     });
 }
 

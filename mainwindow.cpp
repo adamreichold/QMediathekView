@@ -75,21 +75,25 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     m_searchTimer->setInterval(searchTimeout);
 
     m_channelBox = new QComboBox(searchWidget);
+    m_channelBox->setModel(m_model.channels());
     m_channelBox->setEditable(true);
     m_channelBox->setMinimumContentsLength(minimumChannelLength);
     m_channelBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
     searchLayout->addRow(tr("Channel"), m_channelBox);
 
     m_topicBox = new QComboBox(searchWidget);
+    m_topicBox->setModel(m_model.topics());
     m_topicBox->setEditable(true);
     m_topicBox->setMinimumContentsLength(minimumTopicLength);
     m_topicBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
     searchLayout->addRow(tr("Topic"), m_topicBox);
 
     m_titleEdit = new QLineEdit(searchWidget);
+    m_titleEdit->setFocus();
     searchLayout->addRow(tr("Title"), m_titleEdit);
 
-    connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::applyFilter);
+    connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::timeout);
+
     connect(m_channelBox, &QComboBox::currentTextChanged, [this]()
     {
         m_searchTimer->start();
@@ -162,8 +166,6 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     restoreGeometry(m_settings.mainWindowGeometry());
     restoreState(m_settings.mainWindowState());
 
-    resetFilter();
-
     statusBar()->showMessage(tr("Ready"), messageTimeout);
 }
 
@@ -203,41 +205,11 @@ void MainWindow::showDatabaseUpdateFailure(const QString& error)
     statusBar()->showMessage(tr("Failed to updated database: %1").arg(error), errorMessageTimeout);
 }
 
-void MainWindow::applyFilter()
-{
-    m_searchTimer->stop();
-
-    const auto channel = m_channelBox->currentText();
-    const auto topic = m_topicBox->currentText();
-    const auto title = m_titleEdit->text();
-
-    m_model.filter(channel, topic, title);
-
-    if (!channel.isEmpty() && topic.isEmpty())
-    {
-        m_topicBox->clear();
-        m_topicBox->addItem(QString());
-        m_topicBox->addItems(m_model.topics(channel));
-    }
-}
-
-void MainWindow::resetFilter()
-{
-    m_channelBox->clear();
-    m_channelBox->addItem(QString());
-    m_channelBox->addItems(m_model.channels());
-
-    m_topicBox->clear();
-    m_topicBox->addItem(QString());
-    m_topicBox->addItems(m_model.topics());
-
-    m_titleEdit->clear();
-    m_titleEdit->setFocus();
-}
-
 void MainWindow::resetFilterPressed()
 {
-    resetFilter();
+    m_channelBox->clearEditText();
+    m_topicBox->clearEditText();
+    m_titleEdit->clear();;
 }
 
 void MainWindow::updateDatabasePressed()
@@ -258,6 +230,17 @@ void MainWindow::playPressed()
 void MainWindow::downloadPressed()
 {
     emit downloadRequested(m_tableView->currentIndex());
+}
+
+void MainWindow::timeout()
+{
+    m_searchTimer->stop();
+
+    const auto channel = m_channelBox->currentText();
+    const auto topic = m_topicBox->currentText();
+    const auto title = m_titleEdit->text();
+
+    m_model.filter(channel, topic, title);
 }
 
 void MainWindow::activated(const QModelIndex& index)

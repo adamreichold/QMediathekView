@@ -50,7 +50,6 @@ public:
 
 public:
     QStringList channels() const;
-    QStringList topics() const;
     QStringList topics(const QString& channel) const;
 
 private:

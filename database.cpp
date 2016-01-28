@@ -170,8 +170,7 @@ Database::Database(const Settings& settings, QObject* parent)
                        " website TEXT,"
                        " url TEXT,"
                        " urlSmall TEXT,"
-                       " urlLarge TEXT)"
-                   ));
+                       " urlLarge TEXT)"));
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel)"));
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic)"));
@@ -190,8 +189,7 @@ Database::~Database()
 
 QVector< quintptr > Database::fetchId(
     const QString& channel, const QString& topic, const QString& title,
-    const SortBy sortBy, const Qt::SortOrder sortOrder
-) const
+    const SortBy sortBy, const Qt::SortOrder sortOrder) const
 {
     QVector< quintptr > id;
 
@@ -234,8 +232,10 @@ QVector< quintptr > Database::fetchId(
 
     const auto channelFilterClause = channel.isEmpty() ? QStringLiteral("ifnull(1, ?)")
                                      : QStringLiteral("channel LIKE ('%' || ? || '%')");
+
     const auto topicFilterClause = topic.isEmpty() ? QStringLiteral("ifnull(1, ?)")
                                    : QStringLiteral("topic LIKE ('%' || ? || '%')");
+
     const auto titleFilterCaluse = title.isEmpty() ? QStringLiteral("ifnull(1, ?)")
                                    : QStringLiteral("title LIKE ('%' || ? || '%')");
 
@@ -281,8 +281,7 @@ Show Database::fetchShow(const quintptr id) const
                           " duration,"
                           " description, website,"
                           " url, urlSmall, urlLarge"
-                          " FROM shows WHERE id = ?"
-                      ));
+                          " FROM shows WHERE id = ?"));
 
         query << id;
 
@@ -338,38 +337,18 @@ QStringList Database::channels() const
     return channels;
 }
 
-QStringList Database::topics() const
-{
-    QStringList topics;
-
-    try
-    {
-        Query query(m_database);
-
-        query.exec(QStringLiteral("SELECT DISTINCT(topic) FROM shows"));
-
-        while (query.nextRecord())
-        {
-            topics.append(query.nextValue< QString >());
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return topics;
-}
-
 QStringList Database::topics(const QString& channel) const
 {
     QStringList topics;
 
+    const auto filterClause = channel.isEmpty() ? QStringLiteral("ifnull(1, ?)")
+                              : QStringLiteral("channel LIKE ('%' || ? || '%')");
+
     try
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral("SELECT DISTINCT(topic) FROM shows WHERE channel = ?"));
+        query.prepare(QStringLiteral("SELECT DISTINCT(topic) FROM shows WHERE %1").arg(filterClause));
 
         query << channel;
 
@@ -402,16 +381,17 @@ void Database::update(const QByteArray& data)
             query.prepare(QStringLiteral(
                               "INSERT INTO shows ("
                               " channel, topic, title,"
-                              " date, time, duration,"
+                              " date, time,"
+                              " duration,"
                               " description, website,"
                               " url, urlSmall, urlLarge)"
-                              " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                          ));
+                              " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
             const auto inserter = [&query](const Show& show)
             {
                 query << show.channel << show.topic << show.title
-                      << show.date.toJulianDay() << show.time.msecsSinceStartOfDay() << show.duration.msecsSinceStartOfDay()
+                      << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
+                      << show.duration.msecsSinceStartOfDay()
                       << show.description << show.website
                       << show.url << show.urlSmall << show.urlLarge;
 

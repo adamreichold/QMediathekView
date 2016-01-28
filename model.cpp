@@ -1,5 +1,7 @@
 #include "model.h"
 
+#include <QStringListModel>
+
 #include "database.h"
 
 namespace
@@ -15,9 +17,11 @@ namespace Mediathek
 
 Model::Model(Database& database, QObject* parent) : QAbstractTableModel(parent),
     m_database(database),
-    m_cache(cacheSize)
+    m_cache(cacheSize),
+    m_channels(new QStringListModel(this)),
+    m_topics(new QStringListModel(this))
 {
-    reset();
+    update();
 }
 
 Model::~Model()
@@ -138,7 +142,13 @@ void Model::filter(const QString& channel, const QString& topic, const QString& 
 
     beginResetModel();
 
-    m_channel = channel;
+    if (m_channel != channel)
+    {
+        m_channel = channel;
+
+        fetchTopics();
+    }
+
     m_topic = topic;
     m_title = title;
 
@@ -193,6 +203,16 @@ void Model::fetchMore(const QModelIndex& parent)
     m_fetched += fetch;
 
     endInsertRows();
+}
+
+QAbstractItemModel* Model::channels() const
+{
+    return m_channels;
+}
+
+QAbstractItemModel* Model::topics() const
+{
+    return m_topics;
 }
 
 QString Model::title(const QModelIndex& index) const
@@ -255,33 +275,13 @@ QString Model::urlLarge(const QModelIndex& index) const
     return fetchShow(index.internalId()).urlLarge;
 }
 
-QStringList Model::channels() const
-{
-    return m_database.channels();
-}
-
-QStringList Model::topics() const
-{
-    return m_database.topics();
-}
-
-QStringList Model::topics(const QString& channel) const
-{
-    return m_database.topics(channel);
-}
-
-void Model::reset()
+void Model::update()
 {
     beginResetModel();
 
-    m_channel.clear();
-    m_topic.clear();
-    m_title.clear();
-
-    m_sortColumn = 0;
-    m_sortOrder = Qt::AscendingOrder;
-
     fetchId();
+    fetchChannels();
+    fetchTopics();
 
     endResetModel();
 }
@@ -336,6 +336,20 @@ Show Model::fetchShow(const quintptr id) const
     }
 
     return show;
+}
+
+void Model::fetchChannels()
+{
+    auto channels = m_database.channels();
+    channels.prepend(QString());
+    m_channels->setStringList(channels);
+}
+
+void Model::fetchTopics()
+{
+    auto topics = m_database.topics(m_channel);
+    topics.prepend(QString());
+    m_topics->setStringList(topics);
 }
 
 } // Mediathek

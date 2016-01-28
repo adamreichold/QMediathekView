@@ -4,7 +4,6 @@
 #include <QApplication>
 
 class QNetworkAccessManager;
-class QTimer;
 
 namespace Mediathek
 {
@@ -53,8 +52,6 @@ private:
     QNetworkAccessManager* m_networkManager;
 
     MainWindow* m_mainWindow;
-
-    QTimer* m_updateTimer;
 
 };
 

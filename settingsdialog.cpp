@@ -15,8 +15,7 @@ namespace Mediathek
 
 SettingsDialog::SettingsDialog(
     Settings& settings,
-    QWidget* parent
-)
+    QWidget* parent)
     : QDialog(parent)
     , m_settings(settings)
 {
