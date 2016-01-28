@@ -258,9 +258,9 @@ void Application::updateDatabase()
     emit startedDatabaseUpdate();
 
     const auto updatedOn = m_settings->databaseUpdatedOn();
-    const auto updatedBefore = updatedOn.daysTo(QDateTime::currentDateTime());
+    const auto fullUpdateOn = QDateTime(QDate::currentDate(), QTime(9, 0));
 
-    if (!updatedOn.isValid() || updatedBefore > 0)
+    if (!updatedOn.isValid() || updatedOn < fullUpdateOn)
     {
         const auto url = randomItem(m_settings->fullListMirrors());
 
