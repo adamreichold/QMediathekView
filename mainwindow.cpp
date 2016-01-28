@@ -90,9 +90,18 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     searchLayout->addRow(tr("Title"), m_titleEdit);
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::applyFilter);
-    connect(m_channelBox, &QComboBox::currentTextChanged, [this]() { m_searchTimer->start(); });
-    connect(m_topicBox, &QComboBox::currentTextChanged, [this]() { m_searchTimer->start(); });
-    connect(m_titleEdit, &QLineEdit::textChanged, [this]() { m_searchTimer->start(); });
+    connect(m_channelBox, &QComboBox::currentTextChanged, [this]()
+    {
+        m_searchTimer->start();
+    });
+    connect(m_topicBox, &QComboBox::currentTextChanged, [this]()
+    {
+        m_searchTimer->start();
+    });
+    connect(m_titleEdit, &QLineEdit::textChanged, [this]()
+    {
+        m_searchTimer->start();
+    });
 
     const auto buttonsWidget = new QWidget(searchWidget);
     searchLayout->addWidget(buttonsWidget);

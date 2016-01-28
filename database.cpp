@@ -159,6 +159,7 @@ Database::Database(const Settings& settings, QObject* parent)
 
         query.exec(QStringLiteral(
                        "CREATE TABLE IF NOT EXISTS shows ("
+                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " channel TEXT NOCASE,"
                        " topic TEXT NOCASE,"
                        " title TEXT NOCASE,"
@@ -242,16 +243,11 @@ QVector< quintptr > Database::fetchId(
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral(
-                          "SELECT rowid FROM shows"
-                          " WHERE %1 AND %2 AND %3"
-                          " ORDER BY %4"
-                      )
+        query.prepare(QStringLiteral("SELECT id FROM shows WHERE %1 AND %2 AND %3 ORDER BY %4")
                       .arg(channelFilterClause)
                       .arg(topicFilterClause)
                       .arg(titleFilterCaluse)
-                      .arg(sortClause)
-                     );
+                      .arg(sortClause));
 
         query << channel << topic << title;
 
@@ -278,7 +274,15 @@ Show Database::fetchShow(const quintptr id) const
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral("SELECT * FROM shows WHERE rowid = ?"));
+        query.prepare(QStringLiteral(
+                          "SELECT"
+                          " channel, topic, title,"
+                          " date, time,"
+                          " duration,"
+                          " description, website,"
+                          " url, urlSmall, urlLarge"
+                          " FROM shows WHERE id = ?"
+                      ));
 
         query << id;
 
@@ -289,11 +293,15 @@ Show Database::fetchShow(const quintptr id) const
             show.channel = query.nextValue< QString >();
             show.topic = query.nextValue< QString >();
             show.title = query.nextValue< QString >();
+
             show.date =  QDate::fromJulianDay(query.nextValue< qint64 >());
             show.time = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+
             show.duration = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+
             show.description = query.nextValue< QString >();
             show.website = query.nextValue< QString >();
+
             show.url = query.nextValue< QString >();
             show.urlSmall = query.nextValue< QString >();
             show.urlLarge = query.nextValue< QString >();
@@ -361,10 +369,7 @@ QStringList Database::topics(const QString& channel) const
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral(
-                          "SELECT DISTINCT(topic) FROM shows"
-                          " WHERE channel = ?"
-                      ));
+        query.prepare(QStringLiteral("SELECT DISTINCT(topic) FROM shows WHERE channel = ?"));
 
         query << channel;
 
