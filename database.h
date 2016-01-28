@@ -28,7 +28,8 @@ signals:
     void failedToUpdate(const QString& error);
 
 public:
-    void update(const QByteArray& data);
+    void fullUpdate(const QByteArray& data);
+    void partialUpdate(const QByteArray& data);
 
 public:
     enum SortBy

@@ -8,9 +8,9 @@
 namespace Mediathek
 {
 
-using Inserter = std::function< void(const Show&) >;
+using Processor = std::function< void(const Show&) >;
 
-bool parse(const QByteArray& data, const Inserter& inserter);
+bool parse(const QByteArray& data, const Processor& inserter);
 
 } // Mediatehk
 

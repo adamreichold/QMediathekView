@@ -38,7 +38,7 @@ const auto url = QStringLiteral("URL");
 
 } // Tags
 
-const QString& randomItem(const QStringList& list)
+QString randomItem(const QStringList& list)
 {
     std::random_device device;
     std::default_random_engine generator(device());
@@ -235,9 +235,35 @@ void Application::updateDatabase()
 {
     emit startedDatabaseUpdate();
 
+    const auto updatedOn = m_settings->databaseUpdatedOn();
+    const auto updatedBefore = updatedOn.daysTo(QDateTime::currentDateTime());
+
+    if (!updatedOn.isValid() || updatedBefore > 0)
+    {
+        const auto url = randomItem(m_settings->fullListMirrors());
+
+        downloadDatabase(url, [this](const QByteArray& data)
+        {
+            m_database->fullUpdate(data);
+        });
+    }
+    else
+    {
+        const auto url = randomItem(m_settings->partialListMirrors());
+
+        downloadDatabase(url, [this](const QByteArray& data)
+        {
+            m_database->partialUpdate(data);
+        });
+    }
+}
+
+template< typename Consumer >
+void Application::downloadDatabase(const QString& url, const Consumer& consumer)
+{
     const auto decompressor = std::make_shared< Decompressor >();
 
-    QNetworkRequest request(randomItem(m_settings->fullListMirrors()));
+    QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
 
     const auto reply = m_networkManager->get(request);
@@ -252,7 +278,7 @@ void Application::updateDatabase()
         decompressor->appendData(reply->readAll());
     });
 
-    connect(reply, &QNetworkReply::finished, [this, reply, decompressor]()
+    connect(reply, &QNetworkReply::finished, [this, consumer, reply, decompressor]()
     {
         reply->deleteLater();
 
@@ -264,7 +290,7 @@ void Application::updateDatabase()
 
         decompressor->appendData(reply->readAll());
 
-        m_database->update(decompressor->data());
+        consumer(decompressor->data());
     });
 }
 

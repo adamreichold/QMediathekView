@@ -160,9 +160,9 @@ Database::Database(const Settings& settings, QObject* parent)
         query.exec(QStringLiteral(
                        "CREATE TABLE IF NOT EXISTS shows ("
                        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                       " channel TEXT NOCASE,"
-                       " topic TEXT NOCASE,"
-                       " title TEXT NOCASE,"
+                       " channel TEXT,"
+                       " topic TEXT,"
+                       " title TEXT,"
                        " date INTEGER,"
                        " time INTEGER,"
                        " duration INTEGER,"
@@ -172,10 +172,13 @@ Database::Database(const Settings& settings, QObject* parent)
                        " urlSmall TEXT,"
                        " urlLarge TEXT)"));
 
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel COLLATE NOCASE)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic COLLATE NOCASE)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title COLLATE NOCASE)"));
+
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
+
+        query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByChannelTopicTitleAndUrl ON shows (channel, topic, title, url)"));
     }
     catch (QSqlError& error)
     {
@@ -185,6 +188,118 @@ Database::Database(const Settings& settings, QObject* parent)
 
 Database::~Database()
 {
+}
+
+void Database::fullUpdate(const QByteArray& data)
+{
+    QtConcurrent::run([this, data]()
+    {
+        try
+        {
+            Transaction transaction(m_database);
+
+            Query deleteAllShows(m_database);
+            deleteAllShows.exec(QStringLiteral("DELETE FROM shows"));
+
+            Query insertShow(m_database);
+            insertShow.prepare(QStringLiteral(
+                                   "INSERT INTO shows ("
+                                   " channel, topic, title,"
+                                   " date, time,"
+                                   " duration,"
+                                   " description, website,"
+                                   " url, urlSmall, urlLarge)"
+                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+
+            const auto processor = [&insertShow](const Show& show)
+            {
+                insertShow << show.channel << show.topic << show.title
+                           << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
+                           << show.duration.msecsSinceStartOfDay()
+                           << show.description << show.website
+                           << show.url << show.urlSmall << show.urlLarge;
+
+                insertShow.exec();
+            };
+
+            if (!parse(data, processor))
+            {
+                emit failedToUpdate(tr("Could not parse data."));
+                return;
+            }
+
+            transaction.commit();
+
+            m_settings.setDatabaseUpdatedOn();
+
+            emit updated();
+        }
+        catch (QSqlError& error)
+        {
+            qDebug() << error;
+        }
+    });
+}
+
+
+void Database::partialUpdate(const QByteArray& data)
+{
+    QtConcurrent::run([this, data]()
+    {
+        try
+        {
+            Transaction transaction(m_database);
+
+            Query deleteShow(m_database);
+            deleteShow.prepare(QStringLiteral(
+                                   "DELETE FROM shows"
+                                   " WHERE channel = ?"
+                                   " AND topic = ?"
+                                   " AND title = ?"
+                                   " AND url = ?"));
+
+            Query insertShow(m_database);
+            insertShow.prepare(QStringLiteral(
+                                   "INSERT INTO shows ("
+                                   " channel, topic, title,"
+                                   " date, time,"
+                                   " duration,"
+                                   " description, website,"
+                                   " url, urlSmall, urlLarge)"
+                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+
+            const auto processor = [&deleteShow, &insertShow](const Show& show)
+            {
+                deleteShow << show.channel << show.topic << show.title << show.url;
+
+                deleteShow.exec();
+
+                insertShow << show.channel << show.topic << show.title
+                           << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
+                           << show.duration.msecsSinceStartOfDay()
+                           << show.description << show.website
+                           << show.url << show.urlSmall << show.urlLarge;
+
+                insertShow.exec();
+            };
+
+            if (!parse(data, processor))
+            {
+                emit failedToUpdate(tr("Could not parse data."));
+                return;
+            }
+
+            transaction.commit();
+
+            m_settings.setDatabaseUpdatedOn();
+
+            emit updated();
+        }
+        catch (QSqlError& error)
+        {
+            qDebug() << error;
+        }
+    });
 }
 
 QVector< quintptr > Database::fetchId(
@@ -365,56 +480,6 @@ QStringList Database::topics(const QString& channel) const
     }
 
     return topics;
-}
-
-void Database::update(const QByteArray& data)
-{
-    QtConcurrent::run([this, data]()
-    {
-        try
-        {
-            Transaction transaction(m_database);
-            Query query(m_database);
-
-            query.exec(QStringLiteral("DELETE FROM shows"));
-
-            query.prepare(QStringLiteral(
-                              "INSERT INTO shows ("
-                              " channel, topic, title,"
-                              " date, time,"
-                              " duration,"
-                              " description, website,"
-                              " url, urlSmall, urlLarge)"
-                              " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
-
-            const auto inserter = [&query](const Show& show)
-            {
-                query << show.channel << show.topic << show.title
-                      << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
-                      << show.duration.msecsSinceStartOfDay()
-                      << show.description << show.website
-                      << show.url << show.urlSmall << show.urlLarge;
-
-                query.exec();
-            };
-
-            if (!parse(data, inserter))
-            {
-                emit failedToUpdate(tr("Could not parse data."));
-                return;
-            }
-
-            transaction.commit();
-
-            m_settings.setDatabaseUpdatedOn();
-
-            emit updated();
-        }
-        catch (QSqlError& error)
-        {
-            qDebug() << error;
-        }
-    });
 }
 
 } // Mediathek

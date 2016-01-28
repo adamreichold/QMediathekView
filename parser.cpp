@@ -13,7 +13,7 @@ template< typename Iterator, typename Skipper >
 struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 {
     Show show;
-    const Inserter& inserter;
+    const Processor& processor;
 
     void setChannel(const std::string& channel)
     {
@@ -129,9 +129,9 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.urlLarge.clear();
     }
 
-    void insertEntry()
+    void processEntry()
     {
-        inserter(show);
+        processor(show);
     }
 
     template< typename Attributes >
@@ -157,9 +157,9 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 
     boost::spirit::qi::rule< Iterator, std::string() > escapedText;
 
-    Grammar(const Inserter& inserter)
+    Grammar(const Processor& inserter)
         : Grammar::base_type(start)
-        , inserter(inserter)
+        , processor(inserter)
     {
         using std::bind;
         using std::placeholders::_1;
@@ -254,7 +254,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
                 >> lit('{')
                 >> headerList % lit(',')
                 >> lit(',')
-                >> entryList[bind(&Grammar::insertEntry, this)] % lit(',')
+                >> entryList[bind(&Grammar::processEntry, this)] % lit(',')
                 >> lit('}');
     }
 
@@ -267,9 +267,9 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 namespace Mediathek
 {
 
-bool parse(const QByteArray& data, const Inserter& inserter)
+bool parse(const QByteArray& data, const Processor& processor)
 {
-    Grammar< QByteArray::const_iterator, boost::spirit::ascii::space_type > grammar(inserter);
+    Grammar< QByteArray::const_iterator, boost::spirit::ascii::space_type > grammar(processor);
 
     return boost::spirit::qi::phrase_parse(data.begin(), data.end(), grammar, boost::spirit::ascii::space);
 }

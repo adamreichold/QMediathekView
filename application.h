@@ -47,6 +47,9 @@ private:
     template< typename Consumer >
     void downloadMirrors(const QString& url, const Consumer& consumer);
 
+    template< typename Consumer >
+    void downloadDatabase(const QString& url, const Consumer& consumer);
+
 private:
     Settings* m_settings;
     Database* m_database;
