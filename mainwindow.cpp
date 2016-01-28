@@ -115,18 +115,10 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::timeout);
 
-    connect(m_channelBox, &QComboBox::currentTextChanged, [this]()
-    {
-        m_searchTimer->start();
-    });
-    connect(m_topicBox, &QComboBox::currentTextChanged, [this]()
-    {
-        m_searchTimer->start();
-    });
-    connect(m_titleEdit, &QLineEdit::textChanged, [this]()
-    {
-        m_searchTimer->start();
-    });
+    constexpr auto startTimer = static_cast< void (QTimer::*)() >(&QTimer::start);
+    connect(m_channelBox, &QComboBox::currentTextChanged, m_searchTimer, startTimer);
+    connect(m_topicBox, &QComboBox::currentTextChanged, m_searchTimer, startTimer);
+    connect(m_titleEdit, &QLineEdit::textChanged, m_searchTimer, startTimer);
 
     const auto buttonsWidget = new QWidget(searchWidget);
     searchLayout->addWidget(buttonsWidget);
