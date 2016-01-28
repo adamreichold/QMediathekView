@@ -33,16 +33,15 @@ public:
     );
     ~DownloadDialog();
 
-private slots:
+private:
     void selectFilePath();
 
     void start();
     void cancel();
 
     void readyRead();
-    void finished();
-
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void finished();
 
 private:
     const Settings& m_settings;

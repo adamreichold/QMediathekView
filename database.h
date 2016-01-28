@@ -23,8 +23,15 @@ public:
     Database(const Settings& settings, QObject* parent = 0);
     ~Database();
 
+signals:
+    void updated();
+    void failedToUpdate(const QString& error);
+
 public:
-    enum SortField
+    void update(const QByteArray& data);
+
+public:
+    enum SortBy
     {
         SortByChannel,
         SortByTopic,
@@ -36,21 +43,15 @@ public:
 
     QVector< quintptr > fetchId(
         const QString& channel, const QString& topic, const QString& title,
-        const SortField sortField, const Qt::SortOrder sortOrder
+        const SortBy sortBy, const Qt::SortOrder sortOrder
     ) const;
 
     Show fetchShow(const quintptr id) const;
 
+public:
     QStringList channels() const;
     QStringList topics() const;
     QStringList topics(const QString& channel) const;
-
-signals:
-    void updated();
-    void failedToUpdate(const QString& error);
-
-public slots:
-    void update(const QByteArray& data);
 
 private:
     const Settings& m_settings;

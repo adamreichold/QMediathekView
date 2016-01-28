@@ -31,7 +31,7 @@ signals:
     void playRequested(const QModelIndex& index);
     void downloadRequested(const QModelIndex& index);
 
-public slots:
+public:
     void showStartedMirrorListUpdate();
     void showCompletedMirrorListUpdate();
     void showMirrorListUpdateFailure(const QString& error);
@@ -43,16 +43,16 @@ public slots:
     void applyFilter();
     void resetFilter();
 
-private slots:
+private:
     void resetFilterPressed();
     void updateDatabasePressed();
     void editSettingsPressed();
 
-    void activated(const QModelIndex& index);
-    void currentChanged(const QModelIndex& current, const QModelIndex& previous);
-
     void playPressed();
     void downloadPressed();
+
+    void activated(const QModelIndex& index);
+    void currentChanged(const QModelIndex& current, const QModelIndex& previous);
 
 private:
     Settings& m_settings;

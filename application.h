@@ -23,9 +23,6 @@ public:
     Application(int& argc, char** argv);
     ~Application();
 
-public:
-    int exec();
-
 signals:
     void startedMirrorListUpdate();
     void completedMirrorListUpdate();
@@ -35,14 +32,16 @@ signals:
     void completedDatabaseUpdate();
     void failedToUpdateDatabase(const QString& error);
 
-public slots:
+public:
+    int exec();
+
     void play(const QModelIndex& index);
     void download(const QModelIndex& index);
 
     void checkUpdateMirrorList();
     void checkUpdateDatabase();
 
-private slots:
+private:
     void updateMirrorList();
     void updateDatabase();
 

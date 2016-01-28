@@ -189,7 +189,7 @@ Database::~Database()
 
 QVector< quintptr > Database::fetchId(
     const QString& channel, const QString& topic, const QString& title,
-    const SortField sortField, const Qt::SortOrder sortOrder
+    const SortBy sortBy, const Qt::SortOrder sortOrder
 ) const
 {
     QVector< quintptr > id;
@@ -208,7 +208,7 @@ QVector< quintptr > Database::fetchId(
 
     QString sortClause;
 
-    switch (sortField)
+    switch (sortBy)
     {
     default:
     case SortByChannel:
@@ -278,7 +278,11 @@ Show Database::fetchShow(const quintptr id) const
     {
         Query query(m_database);
 
-        query.exec(QStringLiteral("SELECT * FROM shows WHERE rowid = %2").arg(id));
+        query.prepare(QStringLiteral("SELECT * FROM shows WHERE rowid = ?"));
+
+        query << id;
+
+        query.exec();
 
         if (query.nextRecord())
         {

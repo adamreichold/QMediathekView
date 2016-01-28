@@ -5,7 +5,7 @@
 namespace
 {
 
-constexpr auto cacheSize = 2048;
+constexpr auto cacheSize = 1024;
 constexpr auto fetchSize = 256;
 
 } // anonymous
@@ -288,34 +288,34 @@ void Model::reset()
 
 void Model::fetchId()
 {
-    Database::SortField sortField;
+    Database::SortBy sortBy;
 
     switch (m_sortColumn)
     {
     default:
     case 0:
-        sortField = Database::SortByChannel;
+        sortBy = Database::SortByChannel;
         break;
     case 1:
-        sortField = Database::SortByTopic;
+        sortBy = Database::SortByTopic;
         break;
     case 2:
-        sortField = Database::SortByTitle;
+        sortBy = Database::SortByTitle;
         break;
     case 3:
-        sortField = Database::SortByDate;
+        sortBy = Database::SortByDate;
         break;
     case 4:
-        sortField = Database::SortByTime;
+        sortBy = Database::SortByTime;
         break;
     case 5:
-        sortField = Database::SortByDuration;
+        sortBy = Database::SortByDuration;
         break;
     }
 
     m_id = m_database.fetchId(
                m_channel, m_topic, m_title,
-               sortField, m_sortOrder
+               sortBy, m_sortOrder
            );
     m_fetched = 0;
 }

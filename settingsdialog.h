@@ -21,10 +21,10 @@ public:
     SettingsDialog(Settings& settings, QWidget* parent = 0);
     ~SettingsDialog();
 
-public slots:
+public:
     void accept();
 
-private slots:
+private:
     void selectDownloadFolder();
 
 private:

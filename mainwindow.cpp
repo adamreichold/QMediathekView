@@ -90,9 +90,9 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     searchLayout->addRow(tr("Title"), m_titleEdit);
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::applyFilter);
-    connect(m_channelBox, SIGNAL(currentTextChanged(QString)), m_searchTimer, SLOT(start()));
-    connect(m_topicBox, SIGNAL(currentTextChanged(QString)), m_searchTimer, SLOT(start()));
-    connect(m_titleEdit, SIGNAL(textChanged(QString)), m_searchTimer, SLOT(start()));
+    connect(m_channelBox, &QComboBox::currentTextChanged, [this]() { m_searchTimer->start(); });
+    connect(m_topicBox, &QComboBox::currentTextChanged, [this]() { m_searchTimer->start(); });
+    connect(m_titleEdit, &QLineEdit::textChanged, [this]() { m_searchTimer->start(); });
 
     const auto buttonsWidget = new QWidget(searchWidget);
     searchLayout->addWidget(buttonsWidget);
@@ -147,7 +147,8 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     connect(playButton, &QPushButton::pressed, this, &MainWindow::playPressed);
     connect(downloadButton, &QPushButton::pressed, this, &MainWindow::downloadPressed);
 
-    new QShortcut(QKeySequence::Quit, this, SLOT(close()));
+    const auto quitShortcut = new QShortcut(QKeySequence::Quit, this);
+    connect(quitShortcut, &QShortcut::activated, this, &MainWindow::close);
 
     restoreGeometry(m_settings.mainWindowGeometry());
     restoreState(m_settings.mainWindowState());
@@ -240,6 +241,16 @@ void MainWindow::editSettingsPressed()
     SettingsDialog(m_settings, this).exec();
 }
 
+void MainWindow::playPressed()
+{
+    emit playRequested(m_tableView->currentIndex());
+}
+
+void MainWindow::downloadPressed()
+{
+    emit downloadRequested(m_tableView->currentIndex());
+}
+
 void MainWindow::activated(const QModelIndex& index)
 {
     emit playRequested(index);
@@ -249,16 +260,6 @@ void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /
 {
     m_descriptionEdit->setPlainText(m_model.description(current));
     m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current)));
-}
-
-void MainWindow::playPressed()
-{
-    emit playRequested(m_tableView->currentIndex());
-}
-
-void MainWindow::downloadPressed()
-{
-    emit downloadRequested(m_tableView->currentIndex());
 }
 
 } // Mediathek

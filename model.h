@@ -50,7 +50,7 @@ public:
     QStringList topics() const;
     QStringList topics(const QString& channel) const;
 
-public slots:
+public:
     void reset();
 
 private:

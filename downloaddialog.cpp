@@ -193,6 +193,12 @@ void DownloadDialog::readyRead()
     m_file->write(m_networkReply->readAll());
 }
 
+void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
+{
+    m_progressBar->setValue(bytesReceived);
+    m_progressBar->setMaximum(bytesTotal);
+}
+
 void DownloadDialog::finished()
 {
     const auto reply = m_networkReply;
@@ -224,12 +230,6 @@ void DownloadDialog::finished()
     m_startButton->setEnabled(false);
     m_cancelButton->setEnabled(false);
     m_filePathEdit->setEnabled(false);
-}
-
-void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
-{
-    m_progressBar->setValue(bytesReceived);
-    m_progressBar->setMaximum(bytesTotal);
 }
 
 QUrl DownloadDialog::selectedUrl() const
