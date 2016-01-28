@@ -119,10 +119,10 @@ Application::Application(int& argc, char** argv)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_mainWindow(new MainWindow(*m_settings, *m_model))
 {
+    connect(m_database, &Database::updated, m_model, &Model::update);
+
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
     connect(m_database, &Database::failedToUpdate, this, &Application::failedToUpdateDatabase);
-
-    connect(m_database, &Database::updated, m_model, &Model::update);
 
     connect(this, &Application::startedMirrorsUpdate, m_mainWindow, &MainWindow::showStartedMirrorsUpdate);
     connect(this, &Application::completedMirrorsUpdate, m_mainWindow, &MainWindow::showCompletedMirrorsUpdate);
@@ -281,6 +281,62 @@ void Application::updateDatabase()
 }
 
 template< typename Consumer >
+void Application::downloadMirrors(const QString& url, const Consumer& consumer)
+{
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
+
+    const auto reply = m_networkManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, [this, consumer, reply]()
+    {
+        reply->deleteLater();
+
+        if (reply->error())
+        {
+            emit failedToUpdateMirrors(reply->errorString());
+            return;
+        }
+
+        QStringList mirrors;
+
+        {
+            QDomDocument document;
+            document.setContent(reply);
+
+            const auto root = document.documentElement();
+            if (root.tagName() != Tags::root)
+            {
+                emit failedToUpdateMirrors(tr("Received a malformed mirror list."));
+                return;
+            }
+
+            auto server = root.firstChildElement(Tags::server);
+
+            while (!server.isNull())
+            {
+                const auto url = server.firstChildElement(Tags::url).text();
+
+                if (!url.isEmpty())
+                {
+                    mirrors.append(url);
+                }
+
+                server = server.nextSiblingElement(Tags::server);
+            }
+        }
+
+        if (mirrors.isEmpty())
+        {
+            emit failedToUpdateMirrors(tr("Received an empty mirror list."));
+            return;
+        }
+
+        consumer(mirrors);
+    });
+}
+
+template< typename Consumer >
 void Application::downloadDatabase(const QString& url, const Consumer& consumer)
 {
     const auto decompressor = std::make_shared< Decompressor >();
@@ -313,65 +369,6 @@ void Application::downloadDatabase(const QString& url, const Consumer& consumer)
         decompressor->appendData(reply->readAll());
 
         consumer(decompressor->data());
-    });
-}
-
-template< typename Consumer >
-void Application::downloadMirrors(const QString& url, const Consumer& consumer)
-{
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::finished, [this, consumer, reply]()
-    {
-        reply->deleteLater();
-
-        if (reply->error())
-        {
-            emit failedToUpdateMirrors(reply->errorString());
-            return;
-        }
-
-        QStringList mirrorList;
-
-        {
-            QDomDocument document;
-            document.setContent(reply);
-
-            const auto root = document.documentElement();
-            if (root.tagName() != Tags::root)
-            {
-                emit failedToUpdateMirrors(tr("Received a malformed mirror list."));
-                return;
-            }
-
-
-            {
-                auto server = root.firstChildElement(Tags::server);
-
-                while (!server.isNull())
-                {
-                    const auto url = server.firstChildElement(Tags::url).text();
-
-                    if (!url.isEmpty())
-                    {
-                        mirrorList.append(url);
-                    }
-
-                    server = server.nextSiblingElement(Tags::server);
-                }
-            }
-        }
-
-        if (mirrorList.isEmpty())
-        {
-            emit failedToUpdateMirrors(tr("Received an empty mirror list."));
-            return;
-        }
-
-        consumer(mirrorList);
     });
 }
 
