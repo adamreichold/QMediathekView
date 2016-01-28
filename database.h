@@ -65,8 +65,7 @@ public:
 
     QVector< quintptr > fetchId(
         const QString& channel, const QString& topic, const QString& title,
-        const SortBy sortBy, const Qt::SortOrder sortOrder
-    ) const;
+        const SortBy sortBy, const Qt::SortOrder sortOrder) const;
 
     Show fetchShow(const quintptr id) const;
 

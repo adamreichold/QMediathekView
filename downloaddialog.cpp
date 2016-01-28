@@ -161,8 +161,7 @@ void DownloadDialog::selectFilePath()
 {
     const auto filePath = QFileDialog::getSaveFileName(
                               this, tr("Select file path"),
-                              m_filePathEdit->text()
-                          );
+                              m_filePathEdit->text());
 
     if (!filePath.isNull())
     {

@@ -103,8 +103,7 @@ void SettingsDialog::selectDownloadFolder()
 {
     const auto downloadFolder = QFileDialog::getExistingDirectory(
                                     this, tr("Select download folder"),
-                                    m_downloadFolderEdit->text()
-                                );
+                                    m_downloadFolderEdit->text());
 
     if (!downloadFolder.isNull())
     {

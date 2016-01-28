@@ -50,8 +50,7 @@ public:
         const Model& model,
         const QModelIndex& index,
         QNetworkAccessManager* networkManager,
-        QWidget* parent = 0
-    );
+        QWidget* parent = 0);
     ~DownloadDialog();
 
 private:

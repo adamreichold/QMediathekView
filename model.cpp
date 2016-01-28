@@ -336,8 +336,7 @@ void Model::fetchId()
 
     m_id = m_database.fetchId(
                m_channel, m_topic, m_title,
-               sortBy, m_sortOrder
-           );
+               sortBy, m_sortOrder);
     m_fetched = 0;
 }
 
