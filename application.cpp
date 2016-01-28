@@ -1,3 +1,24 @@
+/*
+
+Copyright 2016 Adam Reichold
+
+This file is part of QMediathekView.
+
+QMediathekView is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+QMediathekView is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
 #include "application.h"
 
 #include <memory>
@@ -25,7 +46,8 @@ namespace
 
 using namespace Mediathek;
 
-const auto updateInterval = 60 * 60 * 1000;
+const auto projectName = QStringLiteral("QMediathekView");
+
 const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
 const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
 
@@ -354,3 +376,11 @@ void Application::downloadMirrors(const QString& url, const Consumer& consumer)
 }
 
 } // Mediathek
+
+int main(int argc, char** argv)
+{
+    QApplication::setOrganizationName(projectName);
+    QApplication::setApplicationName(projectName);
+
+    return Mediathek::Application(argc, argv).exec();
+}

@@ -22,8 +22,7 @@ SOURCES += \
     mainwindow.cpp \
     downloaddialog.cpp \
     settingsdialog.cpp \
-    application.cpp \
-    main.cpp
+    application.cpp
 
 HEADERS += \
     settings.h \
