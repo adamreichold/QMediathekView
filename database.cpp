@@ -199,7 +199,7 @@ Database::Database(const Settings& settings, QObject* parent)
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
 
-        query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByChannelTopicTitleAndUrl ON shows (channel, topic, title, url)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannelTopicAndUrl ON shows (channel, topic, url)"));
     }
     catch (QSqlError& error)
     {
@@ -276,7 +276,6 @@ void Database::partialUpdate(const QByteArray& data)
                                    "DELETE FROM shows"
                                    " WHERE channel = ?"
                                    " AND topic = ?"
-                                   " AND title = ?"
                                    " AND url = ?"));
 
             Query insertShow(m_database);
@@ -291,7 +290,7 @@ void Database::partialUpdate(const QByteArray& data)
 
             const auto processor = [&deleteShow, &insertShow](const Show& show)
             {
-                deleteShow << show.channel << show.topic << show.title << show.url;
+                deleteShow << show.channel << show.topic << show.url;
 
                 deleteShow.exec();
 
