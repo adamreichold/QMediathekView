@@ -35,6 +35,9 @@ namespace Keys
 
 DEFINE_KEY(userAgent);
 
+DEFINE_KEY(fullListUrl);
+DEFINE_KEY(partialListUrl);
+
 DEFINE_KEY(fullListMirrors);
 DEFINE_KEY(partialListMirrors);
 
@@ -60,6 +63,9 @@ namespace Defaults
 {
 
 const auto userAgent = QStringLiteral("QMediathekView");
+
+const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
+const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
 
 constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
@@ -90,9 +96,14 @@ QString Settings::userAgent() const
     return m_settings->value(Keys::userAgent, Defaults::userAgent).toString();
 }
 
-void Settings::setUserAgent(const QString& userAgent)
+QString Settings::fullListUrl() const
 {
-    m_settings->setValue(Keys::userAgent, userAgent);
+    return m_settings->value(Keys::fullListUrl, Defaults::fullListUrl).toString();
+}
+
+QString Settings::partialListUrl() const
+{
+    return m_settings->value(Keys::partialListUrl, Defaults::partialListUrl).toString();
 }
 
 QStringList Settings::fullListMirrors() const

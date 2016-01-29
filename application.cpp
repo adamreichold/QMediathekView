@@ -48,9 +48,6 @@ using namespace Mediathek;
 
 const auto projectName = QStringLiteral("QMediathekView");
 
-const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
-const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
-
 namespace Tags
 {
 
@@ -237,11 +234,11 @@ void Application::updateMirrors()
 {
     emit startedMirrorsUpdate();
 
-    downloadMirrors(fullListUrl, [this](const QStringList& mirrors)
+    downloadMirrors(m_settings->fullListUrl(), [this](const QStringList& mirrors)
     {
         m_settings->setFullListMirrors(mirrors);
 
-        downloadMirrors(partialListUrl, [this](const QStringList& mirrors)
+        downloadMirrors(m_settings->partialListUrl(), [this](const QStringList& mirrors)
         {
             m_settings->setPartialListMirrors(mirrors);
             m_settings->setMirrorsUpdatedOn();

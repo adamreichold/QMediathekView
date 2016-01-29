@@ -45,7 +45,8 @@ public:
 
 public:
     QString userAgent() const;
-    void setUserAgent(const QString& userAgent);
+    QString fullListUrl() const;
+    QString partialListUrl() const;
 
     QStringList fullListMirrors() const;
     void setFullListMirrors(const QStringList& mirrors);
