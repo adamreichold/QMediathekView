@@ -138,17 +138,17 @@ QVariant Model::data(const QModelIndex& index, int role) const
     switch (section)
     {
     case 0:
-        return fetchShow(id).channel;
+        return fetchField(id, &Show::channel);
     case 1:
-        return fetchShow(id).topic;
+        return fetchField(id, &Show::topic);
     case 2:
-        return fetchShow(id).title;
+        return fetchField(id, &Show::title);
     case 3:
-        return fetchShow(id).date.toString(tr("dd.MM.yy"));
+        return fetchField(id, &Show::date).toString(tr("dd.MM.yy"));
     case 4:
-        return fetchShow(id).time.toString(tr("hh:mm"));
+        return fetchField(id, &Show::time).toString(tr("hh:mm"));
     case 5:
-        return fetchShow(id).duration.toString(tr("hh:mm:ss"));
+        return fetchField(id, &Show::duration).toString(tr("hh:mm:ss"));
     default:
         return {};
     }
@@ -243,7 +243,7 @@ QString Model::title(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).title;
+    return fetchField(index.internalId(), &Show::title);
 }
 
 QString Model::description(const QModelIndex& index) const
@@ -253,7 +253,7 @@ QString Model::description(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).description;
+    return fetchField(index.internalId(), &Show::description);
 }
 
 QString Model::website(const QModelIndex& index) const
@@ -263,7 +263,7 @@ QString Model::website(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).website;
+    return fetchField(index.internalId(), &Show::website);
 }
 
 QString Model::url(const QModelIndex& index) const
@@ -273,7 +273,7 @@ QString Model::url(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).url;
+    return fetchField(index.internalId(), &Show::url);
 }
 
 QString Model::urlSmall(const QModelIndex& index) const
@@ -283,7 +283,7 @@ QString Model::urlSmall(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).urlSmall;
+    return fetchField(index.internalId(), &Show::urlSmall);
 }
 
 QString Model::urlLarge(const QModelIndex& index) const
@@ -293,7 +293,7 @@ QString Model::urlLarge(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId()).urlLarge;
+    return fetchField(index.internalId(), &Show::urlLarge);
 }
 
 void Model::update()
@@ -340,22 +340,21 @@ void Model::fetchId()
     m_fetched = 0;
 }
 
-Show Model::fetchShow(const quintptr id) const
+template< typename T >
+T Model::fetchField(const quintptr id, T Show::* field) const
 {
-    Show show;
-
-    if (const auto object = m_cache.object(id))
+    if (const auto show = m_cache.object(id))
     {
-        show = *object;
-    }
-    else
-    {
-        show = m_database.fetchShow(id);
-
-        m_cache.insert(id, new Show(show));
+        return show->*field;
     }
 
-    return show;
+    auto show = m_database.fetchShow(id);
+
+    auto value = show.get()->*field;
+
+    m_cache.insert(id, show.release());
+
+    return std::move(value);
 }
 
 void Model::fetchChannels()

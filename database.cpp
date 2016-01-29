@@ -402,9 +402,9 @@ QVector< quintptr > Database::fetchId(
     return id;
 }
 
-Show Database::fetchShow(const quintptr id) const
+std::unique_ptr< Show > Database::fetchShow(const quintptr id) const
 {
-    Show show;
+    std::unique_ptr< Show > show(new Show);
 
     try
     {
@@ -425,21 +425,21 @@ Show Database::fetchShow(const quintptr id) const
 
         if (query.nextRecord())
         {
-            show.channel = query.nextValue< QString >();
-            show.topic = query.nextValue< QString >();
-            show.title = query.nextValue< QString >();
+            show->channel = query.nextValue< QString >();
+            show->topic = query.nextValue< QString >();
+            show->title = query.nextValue< QString >();
 
-            show.date =  QDate::fromJulianDay(query.nextValue< qint64 >());
-            show.time = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+            show->date =  QDate::fromJulianDay(query.nextValue< qint64 >());
+            show->time = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
 
-            show.duration = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
+            show->duration = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
 
-            show.description = query.nextValue< QString >();
-            show.website = query.nextValue< QString >();
+            show->description = query.nextValue< QString >();
+            show->website = query.nextValue< QString >();
 
-            show.url = query.nextValue< QString >();
-            show.urlSmall = query.nextValue< QString >();
-            show.urlLarge = query.nextValue< QString >();
+            show->url = query.nextValue< QString >();
+            show->urlSmall = query.nextValue< QString >();
+            show->urlLarge = query.nextValue< QString >();
         }
     }
     catch (QSqlError& error)
@@ -447,7 +447,7 @@ Show Database::fetchShow(const quintptr id) const
         qDebug() << error;
     }
 
-    return show;
+    return std::move(show);
 }
 
 QStringList Database::channels() const

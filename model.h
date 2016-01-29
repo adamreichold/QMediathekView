@@ -91,7 +91,9 @@ private:
     mutable QCache< quintptr, Show > m_cache;
 
     void fetchId();
-    Show fetchShow(const quintptr id) const;
+
+    template< typename T >
+    T fetchField(const quintptr id, T Show::* field) const;
 
     QStringListModel* m_channels;
     QStringListModel* m_topics;

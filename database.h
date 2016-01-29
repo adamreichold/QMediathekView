@@ -22,10 +22,10 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <QDate>
+#include <memory>
+
 #include <QObject>
 #include <QSqlDatabase>
-#include <QTime>
 #include <QUrl>
 
 #include "schema.h"
@@ -67,7 +67,7 @@ public:
         const QString& channel, const QString& topic, const QString& title,
         const SortBy sortBy, const Qt::SortOrder sortOrder) const;
 
-    Show fetchShow(const quintptr id) const;
+    std::unique_ptr< Show > fetchShow(const quintptr id) const;
 
 public:
     QStringList channels() const;
