@@ -211,7 +211,7 @@ Database::Database(const Settings& settings, QObject* parent)
                        " urlSmall TEXT,"
                        " urlLarge TEXT)"));
 
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
+        query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel COLLATE NOCASE)"));
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic COLLATE NOCASE)"));
@@ -243,7 +243,7 @@ void Database::fullUpdate(const QByteArray& data)
 
             Query insertShow(m_database);
             insertShow.prepare(QStringLiteral(
-                                   "INSERT INTO shows ("
+                                   "INSERT OR IGNORE INTO shows ("
                                    " key,"
                                    " channel, topic, title,"
                                    " date, time,"
@@ -297,7 +297,7 @@ void Database::partialUpdate(const QByteArray& data)
 
             Query insertShow(m_database);
             insertShow.prepare(QStringLiteral(
-                                   "INSERT INTO shows ("
+                                   "INSERT OR IGNORE INTO shows ("
                                    " key,"
                                    " channel, topic, title,"
                                    " date, time,"
