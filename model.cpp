@@ -354,7 +354,7 @@ T Model::fetchField(const quintptr id, T Show::* field) const
 
     m_cache.insert(id, show.release());
 
-    return std::move(value);
+    return value;
 }
 
 void Model::fetchChannels()

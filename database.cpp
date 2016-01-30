@@ -467,7 +467,7 @@ std::unique_ptr< Show > Database::fetchShow(const quintptr id) const
         qDebug() << error;
     }
 
-    return std::move(show);
+    return show;
 }
 
 QStringList Database::channels() const
