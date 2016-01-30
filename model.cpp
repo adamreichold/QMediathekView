@@ -350,7 +350,7 @@ T Model::fetchField(const quintptr id, T Show::* field) const
 
     auto show = m_database.fetchShow(id);
 
-    auto value = show.get()->*field;
+    const auto value = show.get()->*field;
 
     m_cache.insert(id, show.release());
 
