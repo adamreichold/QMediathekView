@@ -21,6 +21,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "database.h"
 
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
@@ -154,6 +155,22 @@ private:
 
 };
 
+QByteArray keyOf(const Show& show)
+{
+    QCryptographicHash hash(QCryptographicHash::Md5);
+
+    const auto addText = [&hash](const QString& text)
+    {
+        hash.addData(reinterpret_cast< const char* >(text.constData()), text.size() * sizeof(QChar));
+    };
+
+    addText(show.channel);
+    addText(show.title);
+    addText(show.url);
+
+    return hash.result();
+}
+
 } // anonymous
 
 namespace Mediathek
@@ -181,6 +198,7 @@ Database::Database(const Settings& settings, QObject* parent)
         query.exec(QStringLiteral(
                        "CREATE TABLE IF NOT EXISTS shows ("
                        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                       " key BLOB,"
                        " channel TEXT,"
                        " topic TEXT,"
                        " title TEXT,"
@@ -193,13 +211,14 @@ Database::Database(const Settings& settings, QObject* parent)
                        " urlSmall TEXT,"
                        " urlLarge TEXT)"));
 
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
+
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel COLLATE NOCASE)"));
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic COLLATE NOCASE)"));
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title COLLATE NOCASE)"));
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
 
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannelTopicAndUrl ON shows (channel, topic, url)"));
     }
     catch (QSqlError& error)
     {
@@ -225,16 +244,18 @@ void Database::fullUpdate(const QByteArray& data)
             Query insertShow(m_database);
             insertShow.prepare(QStringLiteral(
                                    "INSERT INTO shows ("
+                                   " key,"
                                    " channel, topic, title,"
                                    " date, time,"
                                    " duration,"
                                    " description, website,"
                                    " url, urlSmall, urlLarge)"
-                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
             const auto processor = [&insertShow](const Show& show)
             {
-                insertShow << show.channel << show.topic << show.title
+                insertShow << keyOf(show)
+                           << show.channel << show.topic << show.title
                            << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
                            << show.duration.msecsSinceStartOfDay()
                            << show.description << show.website
@@ -272,29 +293,29 @@ void Database::partialUpdate(const QByteArray& data)
             Transaction transaction(m_database);
 
             Query deleteShow(m_database);
-            deleteShow.prepare(QStringLiteral(
-                                   "DELETE FROM shows"
-                                   " WHERE channel = ?"
-                                   " AND topic = ?"
-                                   " AND url = ?"));
+            deleteShow.prepare(QStringLiteral("DELETE FROM shows WHERE key = ?"));
 
             Query insertShow(m_database);
             insertShow.prepare(QStringLiteral(
                                    "INSERT INTO shows ("
+                                   " key,"
                                    " channel, topic, title,"
                                    " date, time,"
                                    " duration,"
                                    " description, website,"
                                    " url, urlSmall, urlLarge)"
-                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
 
             const auto processor = [&deleteShow, &insertShow](const Show& show)
             {
-                deleteShow << show.channel << show.topic << show.url;
+                const auto key = keyOf(show);
+
+                deleteShow << key;
 
                 deleteShow.exec();
 
-                insertShow << show.channel << show.topic << show.title
+                insertShow << key
+                           << show.channel << show.topic << show.title
                            << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
                            << show.duration.msecsSinceStartOfDay()
                            << show.description << show.website
