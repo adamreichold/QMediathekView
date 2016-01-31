@@ -92,8 +92,8 @@ private:
 
     void fetchId();
 
-    template< typename T >
-    T fetchField(const quintptr id, T Show::* field) const;
+    template< typename Type >
+    Type fetchField(const quintptr id, Type Show::* field) const;
 
     QStringListModel* m_channels;
     QStringListModel* m_topics;

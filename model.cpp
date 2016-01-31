@@ -340,8 +340,8 @@ void Model::fetchId()
     m_fetched = 0;
 }
 
-template< typename T >
-T Model::fetchField(const quintptr id, T Show::* field) const
+template< typename Type >
+Type Model::fetchField(const quintptr id, Type Show::* field) const
 {
     if (const auto show = m_cache.object(id))
     {

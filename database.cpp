@@ -140,10 +140,10 @@ public:
         return m_query.next();
     }
 
-    template< typename T >
-    T nextValue()
+    template< typename Type >
+    Type nextValue()
     {
-        return m_query.value(m_valueIndex++).value< T >();
+        return m_query.value(m_valueIndex++).value< Type >();
     }
 
 private:
@@ -155,6 +155,38 @@ private:
 
 };
 
+namespace Queries
+{
+
+#define DEFINE_QUERY(name, text) const auto name = QStringLiteral(text)
+
+DEFINE_QUERY(truncateShows, "DELETE FROM shows");
+
+DEFINE_QUERY(deleteShow, "DELETE FROM shows WHERE key = ?");
+
+DEFINE_QUERY(insertShow,
+             "INSERT OR IGNORE INTO shows ("
+             " key,"
+             " channel, topic, title,"
+             " date, time,"
+             " duration,"
+             " description, website,"
+             " url, urlSmall, urlLarge)"
+             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+DEFINE_QUERY(selectShow,
+             "SELECT"
+             " channel, topic, title,"
+             " date, time,"
+             " duration,"
+             " description, website,"
+             " url, urlSmall, urlLarge"
+             " FROM shows WHERE id = ?");
+
+#undef DEFINE_QUERY
+
+}
+
 QByteArray keyOf(const Show& show)
 {
     QCryptographicHash hash(QCryptographicHash::Md5);
@@ -165,11 +197,91 @@ QByteArray keyOf(const Show& show)
     };
 
     addText(show.channel);
+    addText(show.topic);
     addText(show.title);
+
     addText(show.url);
 
     return hash.result();
 }
+
+void bindTo(Query& query, const QByteArray& key, const Show& show)
+{
+    query << key
+          << show.channel << show.topic << show.title
+          << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
+          << show.duration.msecsSinceStartOfDay()
+          << show.description << show.website
+          << show.url << show.urlSmall << show.urlLarge;
+}
+
+class FullUpdate : public Processor
+{
+public:
+    FullUpdate(QSqlDatabase& database)
+        : m_transaction(database)
+        , m_insertShow(database)
+    {
+        Query(database).exec(Queries::truncateShows);
+        m_insertShow.prepare(Queries::insertShow);
+    }
+
+    void operator()(const Show& show) override
+    {
+        const auto key = keyOf(show);
+
+        bindTo(m_insertShow, key, show);
+
+        m_insertShow.exec();
+    }
+
+    void commit()
+    {
+        m_transaction.commit();
+    }
+
+private:
+    Transaction m_transaction;
+    Query m_insertShow;
+
+};
+
+class PartialUpdate : public Processor
+{
+public:
+    PartialUpdate(QSqlDatabase& database)
+        : m_transaction(database)
+        , m_deleteShow(database)
+        , m_insertShow(database)
+    {
+        m_deleteShow.prepare(Queries::deleteShow);
+        m_insertShow.prepare(Queries::insertShow);
+    }
+
+    void operator()(const Show& show) override
+    {
+        const auto key = keyOf(show);
+
+        m_deleteShow << key;
+
+        m_deleteShow.exec();
+
+        bindTo(m_insertShow, key, show);
+
+        m_insertShow.exec();
+    }
+
+    void commit()
+    {
+        m_transaction.commit();
+    }
+
+private:
+    Transaction m_transaction;
+    Query m_deleteShow;
+    Query m_insertShow;
+
+};
 
 } // anonymous
 
@@ -232,97 +344,24 @@ Database::~Database()
 
 void Database::fullUpdate(const QByteArray& data)
 {
-    QtConcurrent::run([this, data]()
-    {
-        try
-        {
-            Transaction transaction(m_database);
-
-            Query deleteAllShows(m_database);
-            deleteAllShows.exec(QStringLiteral("DELETE FROM shows"));
-
-            Query insertShow(m_database);
-            insertShow.prepare(QStringLiteral(
-                                   "INSERT OR IGNORE INTO shows ("
-                                   " key,"
-                                   " channel, topic, title,"
-                                   " date, time,"
-                                   " duration,"
-                                   " description, website,"
-                                   " url, urlSmall, urlLarge)"
-                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
-
-            const auto processor = [&insertShow](const Show& show)
-            {
-                insertShow << keyOf(show)
-                           << show.channel << show.topic << show.title
-                           << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
-                           << show.duration.msecsSinceStartOfDay()
-                           << show.description << show.website
-                           << show.url << show.urlSmall << show.urlLarge;
-
-                insertShow.exec();
-            };
-
-            if (!parse(data, processor))
-            {
-                emit failedToUpdate(tr("Could not parse data."));
-                return;
-            }
-
-            transaction.commit();
-
-            m_settings.setDatabaseUpdatedOn();
-
-            emit updated();
-        }
-        catch (QSqlError& error)
-        {
-            qDebug() << error;
-        }
-    });
+    update< FullUpdate >(data);
 }
 
 
 void Database::partialUpdate(const QByteArray& data)
 {
+    update< PartialUpdate >(data);
+}
+
+
+template< typename Processor >
+void Database::update(const QByteArray& data)
+{
     QtConcurrent::run([this, data]()
     {
         try
         {
-            Transaction transaction(m_database);
-
-            Query deleteShow(m_database);
-            deleteShow.prepare(QStringLiteral("DELETE FROM shows WHERE key = ?"));
-
-            Query insertShow(m_database);
-            insertShow.prepare(QStringLiteral(
-                                   "INSERT OR IGNORE INTO shows ("
-                                   " key,"
-                                   " channel, topic, title,"
-                                   " date, time,"
-                                   " duration,"
-                                   " description, website,"
-                                   " url, urlSmall, urlLarge)"
-                                   " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
-
-            const auto processor = [&deleteShow, &insertShow](const Show& show)
-            {
-                const auto key = keyOf(show);
-
-                deleteShow << key;
-
-                deleteShow.exec();
-
-                insertShow << key
-                           << show.channel << show.topic << show.title
-                           << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
-                           << show.duration.msecsSinceStartOfDay()
-                           << show.description << show.website
-                           << show.url << show.urlSmall << show.urlLarge;
-
-                insertShow.exec();
-            };
+            Processor processor(m_database);
 
             if (!parse(data, processor))
             {
@@ -330,7 +369,7 @@ void Database::partialUpdate(const QByteArray& data)
                 return;
             }
 
-            transaction.commit();
+            processor.commit();
 
             m_settings.setDatabaseUpdatedOn();
 
@@ -430,14 +469,7 @@ std::unique_ptr< Show > Database::fetchShow(const quintptr id) const
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral(
-                          "SELECT"
-                          " channel, topic, title,"
-                          " date, time,"
-                          " duration,"
-                          " description, website,"
-                          " url, urlSmall, urlLarge"
-                          " FROM shows WHERE id = ?"));
+        query.prepare(Queries::selectShow);
 
         query << id;
 

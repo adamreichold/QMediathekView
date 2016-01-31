@@ -34,7 +34,7 @@ template< typename Iterator, typename Skipper >
 struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 {
     Show show;
-    const Processor& processor;
+    Processor& processor;
 
     void setChannel(const std::string& channel)
     {
@@ -178,7 +178,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 
     boost::spirit::qi::rule< Iterator, std::string() > escapedText;
 
-    Grammar(const Processor& inserter)
+    Grammar(Processor& inserter)
         : Grammar::base_type(start)
         , processor(inserter)
     {
@@ -288,7 +288,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 namespace Mediathek
 {
 
-bool parse(const QByteArray& data, const Processor& processor)
+bool parse(const QByteArray& data, Processor& processor)
 {
     Grammar< QByteArray::const_iterator, boost::spirit::ascii::space_type > grammar(processor);
 

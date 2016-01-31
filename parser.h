@@ -29,9 +29,12 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace Mediathek
 {
 
-using Processor = std::function< void(const Show&) >;
+struct Processor
+{
+    virtual void operator()(const Show& show) = 0;
+};
 
-bool parse(const QByteArray& data, const Processor& inserter);
+bool parse(const QByteArray& data, Processor& inserter);
 
 } // Mediatehk
 

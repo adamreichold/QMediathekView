@@ -52,6 +52,10 @@ public:
     void fullUpdate(const QByteArray& data);
     void partialUpdate(const QByteArray& data);
 
+private:
+    template< typename Processor >
+    void update(const QByteArray& data);
+
 public:
     enum SortBy
     {
