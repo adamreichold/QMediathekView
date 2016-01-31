@@ -36,4 +36,8 @@ HEADERS += \
     application.h
 
 target.path = /usr/bin
-INSTALLS += target
+
+launcher.files = $${TARGET}.desktop
+launcher.path = /usr/share/applications
+
+INSTALLS += target launcher

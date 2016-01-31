@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=QMediathekView
+Comment=An alternative front-end to the MediathekView database
+Categories=AudioVideo;
+TryExec=QMediathekView
+Exec=QMediathekView
