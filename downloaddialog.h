@@ -33,7 +33,7 @@ class QProgressBar;
 class QPushButton;
 class QRadioButton;
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings;
@@ -89,6 +89,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // DOWNLOADDIALOG_H

@@ -44,7 +44,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace
 {
 
-using namespace Mediathek;
+using namespace QMediathekView;
 
 const auto projectName = QStringLiteral("QMediathekView");
 
@@ -105,7 +105,7 @@ private:
 
 } // anonymous
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 Application::Application(int& argc, char** argv)
@@ -369,12 +369,12 @@ void Application::downloadDatabase(const QString& url, const Consumer& consumer)
     });
 }
 
-} // Mediathek
+} // QMediathekView
 
 int main(int argc, char** argv)
 {
     QApplication::setOrganizationName(projectName);
     QApplication::setApplicationName(projectName);
 
-    return Mediathek::Application(argc, argv).exec();
+    return QMediathekView::Application(argc, argv).exec();
 }

@@ -37,7 +37,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace
 {
 
-using namespace Mediathek;
+using namespace QMediathekView;
 
 const auto databaseType = QStringLiteral("QSQLITE");
 const auto databaseName = QStringLiteral("database");
@@ -285,7 +285,7 @@ private:
 
 } // anonymous
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 Database::Database(const Settings& settings, QObject* parent)
@@ -555,4 +555,4 @@ QStringList Database::topics(const QString& channel) const
     return topics;
 }
 
-} // Mediathek
+} // QMediathekView

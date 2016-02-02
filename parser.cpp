@@ -26,7 +26,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace
 {
 
-using namespace Mediathek;
+using namespace QMediathekView;
 
 // *INDENT-OFF*
 
@@ -57,7 +57,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.title = QString::fromStdString(title);
     }
 
-    void setDate(const boost::fusion::vector< int, int, int>& date)
+    void setDate(const boost::fusion::vector< int, int, int >& date)
     {
         using boost::fusion::at_c;
 
@@ -73,7 +73,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.date = {};
     }
 
-    void setTime(const boost::fusion::vector< int, int, int>& time)
+    void setTime(const boost::fusion::vector< int, int, int >& time)
     {
         using boost::fusion::at_c;
 
@@ -89,7 +89,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.time = {};
     }
 
-    void setDuration(const boost::fusion::vector< int, int, int>& duration)
+    void setDuration(const boost::fusion::vector< int, int, int >& duration)
     {
         using boost::fusion::at_c;
 
@@ -285,7 +285,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 
 } // anonymous
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 bool parse(const QByteArray& data, Processor& processor)
@@ -295,4 +295,4 @@ bool parse(const QByteArray& data, Processor& processor)
     return boost::spirit::qi::phrase_parse(data.begin(), data.end(), grammar, boost::spirit::ascii::space);
 }
 
-} // Mediathek
+} // QMediathekView

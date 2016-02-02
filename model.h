@@ -29,7 +29,7 @@ class QStringListModel;
 
 #include "schema.h"
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Database;
@@ -103,6 +103,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // MODEL_H

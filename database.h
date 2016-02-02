@@ -30,7 +30,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "schema.h"
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings;
@@ -84,6 +84,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // DATABASE_H

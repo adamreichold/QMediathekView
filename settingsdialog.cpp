@@ -31,7 +31,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "settings.h"
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 SettingsDialog::SettingsDialog(
@@ -111,4 +111,4 @@ void SettingsDialog::selectDownloadFolder()
     }
 }
 
-} // Mediathek
+} // QMediathekView

@@ -31,7 +31,7 @@ class QTableView;
 class QTextEdit;
 class QTimer;
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings;
@@ -90,6 +90,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // MAINWINDOW_H

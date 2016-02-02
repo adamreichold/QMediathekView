@@ -24,7 +24,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QDateTime>
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 struct Show
@@ -55,6 +55,6 @@ enum class Url : int
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // SCHEMA_H

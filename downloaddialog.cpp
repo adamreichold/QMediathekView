@@ -36,7 +36,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "settings.h"
 #include "model.h"
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 DownloadDialog::DownloadDialog(
@@ -266,4 +266,4 @@ QUrl DownloadDialog::selectedUrl() const
     return m_url;
 }
 
-} // Mediathek
+} // QMediathekView

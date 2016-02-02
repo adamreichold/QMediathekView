@@ -33,7 +33,7 @@ constexpr auto fetchSize = 256;
 
 } // anonymous
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 Model::Model(Database& database, QObject* parent) : QAbstractTableModel(parent),
@@ -379,4 +379,4 @@ void Model::fetchTopics()
     }
 }
 
-} // Mediathek
+} // QMediathekView

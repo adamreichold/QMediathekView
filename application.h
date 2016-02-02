@@ -26,7 +26,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 class QNetworkAccessManager;
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings;
@@ -82,6 +82,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // APPLICATION_H

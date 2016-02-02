@@ -31,7 +31,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 class QSettings;
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings : public QObject
@@ -86,6 +86,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // SETTINGS_H

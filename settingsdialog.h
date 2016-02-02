@@ -28,7 +28,7 @@ class QComboBox;
 class QLineEdit;
 class QSpinBox;
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 class Settings;
@@ -61,6 +61,6 @@ private:
 
 };
 
-} // Mediathek
+} // QMediathekView
 
 #endif // SETTINGSDIALOG_H

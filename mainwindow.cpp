@@ -42,7 +42,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace
 {
 
-using namespace Mediathek;
+using namespace QMediathekView;
 
 constexpr auto messageTimeout = 2 * 1000;
 constexpr auto errorMessageTimeout = 10 * 1000;
@@ -54,7 +54,7 @@ constexpr auto minimumTopicLength = 12;
 
 } // anonymous
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
@@ -266,4 +266,4 @@ void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /
     m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current)));
 }
 
-} // Mediathek
+} // QMediathekView

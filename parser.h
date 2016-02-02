@@ -22,11 +22,9 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <functional>
-
 #include "schema.h"
 
-namespace Mediathek
+namespace QMediathekView
 {
 
 struct Processor
@@ -36,6 +34,6 @@ struct Processor
 
 bool parse(const QByteArray& data, Processor& inserter);
 
-} // Mediatehk
+} // QMediathekView
 
 #endif // PARSER_H
