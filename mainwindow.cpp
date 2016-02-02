@@ -22,7 +22,6 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "mainwindow.h"
 
 #include <QComboBox>
-#include <QDesktopServices>
 #include <QDockWidget>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -160,9 +159,9 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     detailsLayout->addWidget(m_descriptionEdit, 0, 1, 3, 1);
 
     m_websiteLabel = new QLabel(detailsWidget);
+    m_websiteLabel->setWordWrap(true);
+    m_websiteLabel->setOpenExternalLinks(true);
     detailsLayout->addWidget(m_websiteLabel, 3, 1);
-
-    connect(m_websiteLabel, &QLabel::linkActivated, QDesktopServices::openUrl);
 
     const auto playButton = new QPushButton(QIcon::fromTheme(QStringLiteral("media-playback-start")), QString(), detailsWidget);
     detailsLayout->addWidget(playButton, 0, 0);
