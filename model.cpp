@@ -49,16 +49,6 @@ Model::~Model()
 {
 }
 
-int Model::rowCount(const QModelIndex& parent) const
-{
-    if (parent.isValid())
-    {
-        return 0;
-    }
-
-    return m_fetched;
-}
-
 int Model::columnCount(const QModelIndex& parent) const
 {
     if (parent.isValid())
@@ -98,6 +88,16 @@ QVariant Model::headerData(int section, Qt::Orientation orientation, int role) c
     default:
         return {};
     }
+}
+
+int Model::rowCount(const QModelIndex& parent) const
+{
+    if (parent.isValid())
+    {
+        return 0;
+    }
+
+    return m_fetched;
 }
 
 QModelIndex Model::index(int row, int column, const QModelIndex& parent) const
