@@ -311,9 +311,9 @@ Database::Database(const Settings& settings, QObject* parent)
                        "CREATE TABLE IF NOT EXISTS shows ("
                        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " key BLOB,"
-                       " channel TEXT,"
-                       " topic TEXT,"
-                       " title TEXT,"
+                       " channel TEXT NOCASE,"
+                       " topic TEXT NOCASE,"
+                       " title TEXT NOCASE,"
                        " date INTEGER,"
                        " time INTEGER,"
                        " duration INTEGER,"
@@ -325,9 +325,9 @@ Database::Database(const Settings& settings, QObject* parent)
 
         query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
 
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel COLLATE NOCASE)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic COLLATE NOCASE)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title COLLATE NOCASE)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic)"));
+        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title)"));
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
 
