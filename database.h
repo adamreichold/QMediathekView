@@ -57,23 +57,23 @@ private:
     void update(const QByteArray& data);
 
 public:
-    enum SortBy
+    enum SortColumn
     {
-        SortByChannel,
-        SortByTopic,
-        SortByTitle,
-        SortByDate,
-        SortByTime,
-        SortByDuration
+        SortChannel,
+        SortTopic,
+        SortTitle,
+        SortDate,
+        SortTime,
+        SortDuration
     };
 
-    QVector< quintptr > fetchId(
+    QVector< quintptr > query(
         const QString& channel, const QString& topic, const QString& title,
-        const SortBy sortBy, const Qt::SortOrder sortOrder) const;
-
-    std::unique_ptr< Show > fetchShow(const quintptr id) const;
+        const SortColumn sortColumn, const Qt::SortOrder sortOrder) const;
 
 public:
+    std::unique_ptr< Show > show(const quintptr id) const;
+
     QStringList channels() const;
     QStringList topics(const QString& channel) const;
 

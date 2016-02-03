@@ -382,9 +382,9 @@ void Database::update(const QByteArray& data)
     });
 }
 
-QVector< quintptr > Database::fetchId(
+QVector< quintptr > Database::query(
     const QString& channel, const QString& topic, const QString& title,
-    const SortBy sortBy, const Qt::SortOrder sortOrder) const
+    const SortColumn sortColumn, const Qt::SortOrder sortOrder) const
 {
     QVector< quintptr > id;
 
@@ -402,25 +402,25 @@ QVector< quintptr > Database::fetchId(
 
     QString sortClause;
 
-    switch (sortBy)
+    switch (sortColumn)
     {
     default:
-    case SortByChannel:
+    case SortChannel:
         sortClause = QStringLiteral("channel %1, date DESC, time DESC").arg(sortOrderClause);
         break;
-    case SortByTopic:
+    case SortTopic:
         sortClause = QStringLiteral("topic %1, date DESC, time DESC").arg(sortOrderClause);
         break;
-    case SortByTitle:
+    case SortTitle:
         sortClause = QStringLiteral("title %1, date DESC, time DESC").arg(sortOrderClause);
         break;
-    case SortByDate:
+    case SortDate:
         sortClause = QStringLiteral("date %1").arg(sortOrderClause);
         break;
-    case SortByTime:
+    case SortTime:
         sortClause = QStringLiteral("time %1").arg(sortOrderClause);
         break;
-    case SortByDuration:
+    case SortDuration:
         sortClause = QStringLiteral("duration %1").arg(sortOrderClause);
         break;
     }
@@ -461,7 +461,7 @@ QVector< quintptr > Database::fetchId(
     return id;
 }
 
-std::unique_ptr< Show > Database::fetchShow(const quintptr id) const
+std::unique_ptr< Show > Database::show(const quintptr id) const
 {
     std::unique_ptr< Show > show(new Show);
 

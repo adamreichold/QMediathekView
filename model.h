@@ -88,12 +88,13 @@ private:
 
     QVector< quintptr > m_id;
     int m_fetched = 0;
+
+    void query();
+
     mutable QCache< quintptr, Show > m_cache;
 
-    void fetchId();
-
-    template< typename Type >
-    Type fetchField(const quintptr id, Type Show::* field) const;
+    template< typename Type, Type Show::* Field >
+    Type fetchShow(const quintptr id) const;
 
     QStringListModel* m_channels;
     QStringListModel* m_topics;

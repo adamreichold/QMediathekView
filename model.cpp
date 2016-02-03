@@ -133,22 +133,22 @@ QVariant Model::data(const QModelIndex& index, int role) const
     }
 
     const auto id = index.internalId();
-    const auto section = index.column();
+    const auto column = index.column();
 
-    switch (section)
+    switch (column)
     {
     case 0:
-        return fetchField(id, &Show::channel);
+        return fetchShow< QString, &Show::channel >(id);
     case 1:
-        return fetchField(id, &Show::topic);
+        return fetchShow< QString, &Show::topic >(id);
     case 2:
-        return fetchField(id, &Show::title);
+        return fetchShow< QString, &Show::title >(id);
     case 3:
-        return fetchField(id, &Show::date).toString(tr("dd.MM.yy"));
+        return fetchShow< QDate, &Show::date >(id).toString(tr("dd.MM.yy"));
     case 4:
-        return fetchField(id, &Show::time).toString(tr("hh:mm"));
+        return fetchShow< QTime, &Show::time >(id).toString(tr("hh:mm"));
     case 5:
-        return fetchField(id, &Show::duration).toString(tr("hh:mm:ss"));
+        return fetchShow< QTime, &Show::duration >(id).toString(tr("hh:mm:ss"));
     default:
         return {};
     }
@@ -173,7 +173,7 @@ void Model::filter(const QString& channel, const QString& topic, const QString& 
     m_topic = topic;
     m_title = title;
 
-    fetchId();
+    query();
 
     endResetModel();
 }
@@ -195,7 +195,7 @@ void Model::sort(int column, Qt::SortOrder order)
     m_sortColumn = column;
     m_sortOrder = order;
 
-    fetchId();
+    query();
 
     endResetModel();
 }
@@ -243,7 +243,7 @@ QString Model::title(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::title);
+    return fetchShow< QString, &Show::title >(index.internalId());
 }
 
 QString Model::description(const QModelIndex& index) const
@@ -253,7 +253,7 @@ QString Model::description(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::description);
+    return fetchShow< QString, &Show::description >(index.internalId());
 }
 
 QString Model::website(const QModelIndex& index) const
@@ -263,7 +263,7 @@ QString Model::website(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::website);
+    return fetchShow< QString, &Show::website >(index.internalId());
 }
 
 QString Model::url(const QModelIndex& index) const
@@ -273,7 +273,7 @@ QString Model::url(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::url);
+    return fetchShow< QString, &Show::url >(index.internalId());
 }
 
 QString Model::urlSmall(const QModelIndex& index) const
@@ -283,7 +283,7 @@ QString Model::urlSmall(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::urlSmall);
+    return fetchShow< QString, &Show::urlSmall >(index.internalId());
 }
 
 QString Model::urlLarge(const QModelIndex& index) const
@@ -293,64 +293,64 @@ QString Model::urlLarge(const QModelIndex& index) const
         return {};
     }
 
-    return fetchField(index.internalId(), &Show::urlLarge);
+    return fetchShow< QString, &Show::urlLarge >(index.internalId());
 }
 
 void Model::update()
 {
     beginResetModel();
 
-    fetchId();
+    query();
     fetchChannels();
     fetchTopics();
 
     endResetModel();
 }
 
-void Model::fetchId()
+void Model::query()
 {
-    Database::SortBy sortBy;
+    Database::SortColumn sortColumn;
 
     switch (m_sortColumn)
     {
     default:
     case 0:
-        sortBy = Database::SortByChannel;
+        sortColumn = Database::SortChannel;
         break;
     case 1:
-        sortBy = Database::SortByTopic;
+        sortColumn = Database::SortTopic;
         break;
     case 2:
-        sortBy = Database::SortByTitle;
+        sortColumn = Database::SortTitle;
         break;
     case 3:
-        sortBy = Database::SortByDate;
+        sortColumn = Database::SortDate;
         break;
     case 4:
-        sortBy = Database::SortByTime;
+        sortColumn = Database::SortTime;
         break;
     case 5:
-        sortBy = Database::SortByDuration;
+        sortColumn = Database::SortDuration;
         break;
     }
 
-    m_id = m_database.fetchId(
+    m_id = m_database.query(
                m_channel, m_topic, m_title,
-               sortBy, m_sortOrder);
+               sortColumn, m_sortOrder);
     m_fetched = 0;
 }
 
-template< typename Type >
-Type Model::fetchField(const quintptr id, Type Show::* field) const
+template< typename Type, Type Show::* Field >
+Type Model::fetchShow(const quintptr id) const
 {
     if (const auto show = m_cache.object(id))
     {
-        return show->*field;
+        return show->*Field;
     }
 
-    auto show = m_database.fetchShow(id);
+    auto show = m_database.show(id);
 
-    const auto value = show.get()->*field;
+    const auto value = show.get()->*Field;
 
     m_cache.insert(id, show.release());
 
