@@ -95,6 +95,9 @@ private:
     template< typename Type, Type Show::* Field >
     Type fetchShow(const quintptr id) const;
 
+    template< typename Type, Type (Show::* Method)() >
+    Type fetchShow(const quintptr id) const;
+
     QStringListModel* m_channels;
     QStringListModel* m_topics;
 

@@ -357,6 +357,23 @@ Type Model::fetchShow(const quintptr id) const
     return value;
 }
 
+template< typename Type, Type (Show::* Method)() >
+Type Model::fetchShow(const quintptr id) const
+{
+    if (const auto show = m_cache.object(id))
+    {
+        return (show->*Method)();
+    }
+
+    auto show = m_database.show(id);
+
+    const auto value = (show.get()->*Method)();
+
+    m_cache.insert(id, show.release());
+
+    return value;
+}
+
 void Model::fetchChannels()
 {
     auto channels = m_database.channels();

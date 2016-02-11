@@ -169,8 +169,10 @@ DEFINE_QUERY(insertShow,
              " date, time,"
              " duration,"
              " description, website,"
-             " url, urlSmall, urlLarge)"
-             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+             " url,"
+             " urlSmallOffset, urlSmallSuffix,"
+             " urlLargeOffset, urlLargeSuffix)"
+             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
 DEFINE_QUERY(selectShow,
              "SELECT"
@@ -178,7 +180,9 @@ DEFINE_QUERY(selectShow,
              " date, time,"
              " duration,"
              " description, website,"
-             " url, urlSmall, urlLarge"
+             " url,"
+             " urlSmallOffset, urlSmallSuffix,"
+             " urlLargeOffset, urlLargeSuffix"
              " FROM shows WHERE id = ?");
 
 #undef DEFINE_QUERY
@@ -210,7 +214,9 @@ void bindTo(Query& query, const QByteArray& key, const Show& show)
           << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
           << show.duration.msecsSinceStartOfDay()
           << show.description << show.website
-          << show.url << show.urlSmall << show.urlLarge;
+          << show.url
+          << show.urlSmallOffset << show.urlSmallSuffix
+          << show.urlLargeOffset << show.urlLargeSuffix;
 }
 
 class FullUpdate : public Processor
@@ -318,8 +324,10 @@ Database::Database(Settings& settings, QObject* parent)
                        " description TEXT,"
                        " website TEXT,"
                        " url TEXT,"
-                       " urlSmall TEXT,"
-                       " urlLarge TEXT)"));
+                       " urlSmallOffset INTEGER,"
+                       " urlSmallSuffix TEXT,"
+                       " urlLargeOffset INTEGER,"
+                       " urlLargeSuffix TEXT)"));
 
         query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
 
@@ -488,8 +496,12 @@ std::unique_ptr< Show > Database::show(const quintptr id) const
             show->website = query.nextValue< QString >();
 
             show->url = query.nextValue< QString >();
-            show->urlSmall = query.nextValue< QString >();
-            show->urlLarge = query.nextValue< QString >();
+
+            show->urlSmallOffset = query.nextValue< unsigned short >();
+            show->urlSmallSuffix = query.nextValue< QString >();
+
+            show->urlLargeOffset = query.nextValue< unsigned short >();
+            show->urlLargeSuffix = query.nextValue< QString >();
         }
     }
     catch (QSqlError& error)

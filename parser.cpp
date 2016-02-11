@@ -125,14 +125,16 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         using boost::fusion::at_c;
 
         const auto& offset = at_c<0>(replacement);
-        const auto& text = at_c<1>(replacement);
+        const auto& suffix = at_c<1>(replacement);
 
-        show.urlSmall = show.url.left(offset) + QString::fromStdString(text);
+        show.urlSmallOffset = offset;
+        show.urlSmallSuffix = QString::fromStdString(suffix);
     }
 
     void resetUrlSmall()
     {
-        show.urlSmall.clear();
+        show.urlSmallOffset = 0;
+        show.urlSmallSuffix.clear();
     }
 
     void setUrlLarge(const boost::fusion::vector< int, std::string >& replacement)
@@ -140,14 +142,16 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         using boost::fusion::at_c;
 
         const auto& offset = at_c<0>(replacement);
-        const auto& text = at_c<1>(replacement);
+        const auto& suffix = at_c<1>(replacement);
 
-        show.urlLarge = show.url.left(offset) + QString::fromStdString(text);
+        show.urlLargeOffset = offset;
+        show.urlLargeSuffix = QString::fromStdString(suffix);
     }
 
     void resetUrlLarge()
     {
-        show.urlLarge.clear();
+        show.urlLargeOffset = 0;
+        show.urlLargeSuffix.clear();
     }
 
     void processEntry()
