@@ -151,7 +151,7 @@ QDateTime Settings::mirrorsUpdatedOn() const
     return m_settings->value(Keys::mirrorsUpdatedOn).toDateTime();
 }
 
-void Settings::setMirrorsUpdatedOn() const
+void Settings::setMirrorsUpdatedOn()
 {
     m_settings->setValue(Keys::mirrorsUpdatedOn, QDateTime::currentDateTime());
 }
@@ -161,7 +161,7 @@ QDateTime Settings::databaseUpdatedOn() const
     return m_settings->value(Keys::databaseUpdatedOn).toDateTime();
 }
 
-void Settings::setDatabaseUpdatedOn() const
+void Settings::setDatabaseUpdatedOn()
 {
     m_settings->setValue(Keys::databaseUpdatedOn, QDateTime::currentDateTime());
 }

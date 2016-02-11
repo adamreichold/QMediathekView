@@ -288,7 +288,7 @@ private:
 namespace QMediathekView
 {
 
-Database::Database(const Settings& settings, QObject* parent)
+Database::Database(Settings& settings, QObject* parent)
     : QObject(parent)
     , m_settings(settings)
     , m_database(QSqlDatabase::addDatabase(databaseType))

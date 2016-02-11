@@ -61,10 +61,10 @@ public:
     void setDatabaseUpdateAfterHours(int hours);
 
     QDateTime mirrorsUpdatedOn() const;
-    void setMirrorsUpdatedOn() const;
+    void setMirrorsUpdatedOn();
 
     QDateTime databaseUpdatedOn() const;
-    void setDatabaseUpdatedOn() const;
+    void setDatabaseUpdatedOn();
 
     QString playCommand() const;
     void setPlayCommand(const QString& command);

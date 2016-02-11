@@ -26,7 +26,6 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QObject>
 #include <QSqlDatabase>
-#include <QUrl>
 
 #include "schema.h"
 
@@ -41,7 +40,7 @@ class Database : public QObject
     Q_DISABLE_COPY(Database)
 
 public:
-    Database(const Settings& settings, QObject* parent = 0);
+    Database(Settings& settings, QObject* parent = 0);
     ~Database();
 
 signals:
@@ -78,7 +77,7 @@ public:
     QStringList topics(const QString& channel) const;
 
 private:
-    const Settings& m_settings;
+    Settings& m_settings;
 
     mutable QSqlDatabase m_database;
 
