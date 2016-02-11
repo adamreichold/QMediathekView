@@ -23,11 +23,9 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QCryptographicHash>
 #include <QDebug>
-#include <QDir>
 #include <QStandardPaths>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QTime>
 
 #include <QtConcurrentRun>
 
