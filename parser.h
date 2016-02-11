@@ -32,7 +32,7 @@ struct Processor
     virtual void operator()(const Show& show) = 0;
 };
 
-bool parse(const QByteArray& data, Processor& inserter);
+bool parse(const QByteArray& data, Processor& processor);
 
 } // QMediathekView
 
