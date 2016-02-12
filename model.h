@@ -92,11 +92,11 @@ private:
 
     mutable QCache< quintptr, Show > m_cache;
 
-    template< typename Type, Type Show::* Field >
-    Type fetchShow(const quintptr id) const;
+    template< typename Member >
+    using ResultOf = typename std::decay< typename std::result_of< Member(Show) >::type >::type;
 
-    template< typename Type, Type (Show::* Method)() >
-    Type fetchShow(const quintptr id) const;
+    template< typename Member >
+    ResultOf< Member > fetchShow(const quintptr id, Member member) const;
 
     QStringListModel* m_channels;
     QStringListModel* m_topics;
