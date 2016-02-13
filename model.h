@@ -82,7 +82,7 @@ private:
     QString m_topic;
     QString m_title;
 
-    int m_sortColumn = -1;
+    int m_sortColumn = 0;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
 
     QVector< quintptr > m_id;
