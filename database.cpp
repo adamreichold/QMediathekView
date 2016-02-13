@@ -346,6 +346,7 @@ Database::Database(Settings& settings, QObject* parent)
 
 Database::~Database()
 {
+    m_update.waitForFinished();
 }
 
 void Database::fullUpdate(const QByteArray& data)
@@ -363,7 +364,12 @@ void Database::partialUpdate(const QByteArray& data)
 template< typename Processor >
 void Database::update(const QByteArray& data)
 {
-    QtConcurrent::run([this, data]()
+    if (m_update.isRunning())
+    {
+        return;
+    }
+
+    m_update = QtConcurrent::run([this, data]()
     {
         try
         {

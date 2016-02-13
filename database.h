@@ -24,6 +24,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 
+#include <QFuture>
 #include <QObject>
 #include <QSqlDatabase>
 
@@ -80,6 +81,8 @@ private:
     Settings& m_settings;
 
     mutable QSqlDatabase m_database;
+
+    QFuture< void > m_update;
 
 };
 
