@@ -21,11 +21,19 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "database.h"
 
-#include <QCryptographicHash>
+#include <fstream>
+#include <vector>
+
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/date_time/gregorian/formatters.hpp>
+#include <boost/date_time/gregorian/greg_serialize.hpp>
+#include <boost/date_time/posix_time/time_serialize.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include <QDebug>
 #include <QStandardPaths>
-#include <QSqlError>
-#include <QSqlQuery>
 
 #include <QtConcurrentRun>
 
@@ -38,344 +46,309 @@ namespace QMediathekView
 namespace
 {
 
-const auto databaseType = QStringLiteral("QSQLITE");
-const auto databaseName = QStringLiteral("database");
-
-class Transaction
+void collect(
+    const std::vector< std::string >& showsByKey, const std::string& key,
+    std::vector< quintptr >& id)
 {
-public:
-    Transaction(QSqlDatabase& database)
-        : m_database(database)
-        , m_committed(false)
+    for (std::size_t index = 0, count = showsByKey.size(); index < count; ++index)
     {
-        if (!m_database.transaction())
+        if (showsByKey.at(index).find(key) != std::string::npos)
         {
-            throw m_database.lastError();
+            id.push_back(index);
         }
     }
-
-    ~Transaction() noexcept
-    {
-        if (!m_committed)
-        {
-            m_database.rollback();
-        }
-    }
-
-    void commit()
-    {
-        if (!m_database.commit())
-        {
-            throw m_database.lastError();
-        }
-
-        m_committed = true;
-    }
-
-private:
-    Q_DISABLE_COPY(Transaction)
-
-    QSqlDatabase& m_database;
-    bool m_committed;
-
-};
-
-class Query
-{
-public:
-    Query(QSqlDatabase& database)
-        : m_query(database)
-        , m_bindValueIndex(0)
-        , m_valueIndex(0)
-    {
-    }
-
-    void prepare(const QString& query)
-    {
-        if (!m_query.prepare(query))
-        {
-            throw m_query.lastError();
-        }
-
-        m_bindValueIndex = 0;
-    }
-
-    void exec()
-    {
-        if (!m_query.exec())
-        {
-            throw m_query.lastError();
-        }
-
-        m_bindValueIndex = 0;
-    }
-
-    void exec(const QString& query)
-    {
-        if (!m_query.exec(query))
-        {
-            throw m_query.lastError();
-        }
-
-        m_bindValueIndex = 0;
-    }
-
-    Query& operator <<(const QVariant& value)
-    {
-        m_query.bindValue(m_bindValueIndex++, value);
-
-        return *this;
-    }
-
-    bool nextRecord()
-    {
-        if (!m_query.isActive())
-        {
-            throw m_query.lastError();
-        }
-
-        m_valueIndex = 0;
-
-        return m_query.next();
-    }
-
-    template< typename Type >
-    Type nextValue()
-    {
-        return m_query.value(m_valueIndex++).value< Type >();
-    }
-
-private:
-    Q_DISABLE_COPY(Query)
-
-    QSqlQuery m_query;
-    int m_bindValueIndex;
-    int m_valueIndex;
-
-};
-
-namespace Queries
-{
-
-#define DEFINE_QUERY(name, text) const auto name = QStringLiteral(text)
-
-DEFINE_QUERY(createShows,
-             "CREATE TABLE IF NOT EXISTS shows ("
-             " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-             " key BLOB,"
-             " channel TEXT,"
-             " topic TEXT,"
-             " title TEXT,"
-             " date INTEGER,"
-             " time INTEGER,"
-             " duration INTEGER,"
-             " description TEXT,"
-             " website TEXT,"
-             " url TEXT,"
-             " urlSmallOffset INTEGER,"
-             " urlSmallSuffix TEXT,"
-             " urlLargeOffset INTEGER,"
-             " urlLargeSuffix TEXT)");
-
-DEFINE_QUERY(truncateShows, "DELETE FROM shows");
-
-DEFINE_QUERY(createShowsByKey, "CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)");
-
-DEFINE_QUERY(createShowsByText,
-             "CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
-             " channel,"
-             " topic,"
-             " title,"
-             " content=shows)");
-
-DEFINE_QUERY(rebuildShowsByText, "INSERT INTO showsByText(showsByText) VALUES('rebuild')");
-
-DEFINE_QUERY(deleteShow, "DELETE FROM shows WHERE key = ?");
-
-DEFINE_QUERY(insertShow,
-             "INSERT OR IGNORE INTO shows ("
-             " key,"
-             " channel, topic, title,"
-             " date, time,"
-             " duration,"
-             " description, website,"
-             " url,"
-             " urlSmallOffset, urlSmallSuffix,"
-             " urlLargeOffset, urlLargeSuffix)"
-             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-DEFINE_QUERY(selectShow,
-             "SELECT"
-             " channel, topic, title,"
-             " date, time,"
-             " duration,"
-             " description, website,"
-             " url,"
-             " urlSmallOffset, urlSmallSuffix,"
-             " urlLargeOffset, urlLargeSuffix"
-             " FROM shows WHERE id = ?");
-
-DEFINE_QUERY(selectChannels, "SELECT DISTINCT(channel) FROM showsByText");
-
-DEFINE_QUERY(selectTopics, "SELECT DISTINCT(topic) FROM showsByText");
-
-DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM showsByText WHERE showsByText MATCH 'channel : \"' || ? || '\"'");
-
-#undef DEFINE_QUERY
-
 }
 
-QByteArray keyOf(const Show& show)
+void filter(
+    const std::vector< std::string >& showsByKey, const std::string& key,
+    std::vector< quintptr >& id)
 {
-    QCryptographicHash hash(QCryptographicHash::Md5);
-
-    const auto addText = [&hash](const QString& text)
+    if (key.empty())
     {
-        hash.addData(reinterpret_cast< const char* >(text.constData()), text.size() * sizeof(QChar));
-    };
+        return;
+    }
 
-    addText(show.channel);
-    addText(show.topic);
-    addText(show.title);
-
-    addText(show.url);
-
-    return hash.result();
+    id.erase(std::remove_if(id.begin(), id.end(), [&](const quintptr index)
+    {
+        return showsByKey.at(index).find(key) == std::string::npos;
+    }), id.end());
 }
 
-void bindTo(Query& query, const QByteArray& key, const Show& show)
+template< typename Member >
+void sort(
+    Member member, const Database::SortOrder sortOrder,
+    const std::vector< Show >& shows, std::vector< quintptr >& id)
 {
-    query << key
-          << show.channel << show.topic << show.title
-          << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
-          << show.duration.msecsSinceStartOfDay()
-          << show.description << show.website
-          << show.url
-          << show.urlSmallOffset << show.urlSmallSuffix
-          << show.urlLargeOffset << show.urlLargeSuffix;
+    switch (sortOrder)
+    {
+    default:
+    case Database::SortAscending:
+        std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
+        {
+            return member(shows.at(lhs)) < member(shows.at(rhs));
+        });
+        break;
+    case Database::SortDescending:
+        std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
+        {
+            return member(shows.at(rhs)) < member(shows.at(lhs));
+        });
+        break;
+    }
 }
 
-class FullUpdate : public Processor
+void chronologicalSort(
+    const std::vector< std::string >& showsByKey, const Database::SortOrder sortOrder,
+    const std::vector< Show >& shows, std::vector< quintptr >& id)
 {
-public:
-    FullUpdate(QSqlDatabase& database)
-        : m_transaction(database)
-        , m_insertShow(database)
+    switch (sortOrder)
     {
-        Query(database).exec(Queries::truncateShows);
+    default:
+    case Database::SortAscending:
+        std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
+        {
+            const auto& lhs_ = shows.at(lhs);
+            const auto& rhs_ = shows.at(rhs);
 
-        m_insertShow.prepare(Queries::insertShow);
+            return operator< (
+                       std::tie(showsByKey.at(lhs), rhs_.date, rhs_.time),
+                       std::tie(showsByKey.at(rhs), lhs_.date, lhs_.time));
+        });
+        break;
+    case Database::SortDescending:
+        std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
+        {
+            const auto& lhs_ = shows.at(lhs);
+            const auto& rhs_ = shows.at(rhs);
+
+            return operator< (
+                       std::tie(showsByKey.at(rhs), rhs_.date, rhs_.time),
+                       std::tie(showsByKey.at(lhs), lhs_.date, lhs_.time));
+        });
+        break;
     }
+}
 
-    void operator()(const Show& show) override
-    {
-        const auto key = keyOf(show);
-
-        bindTo(m_insertShow, key, show);
-
-        m_insertShow.exec();
-    }
-
-    void commit()
-    {
-        m_transaction.commit();
-    }
-
-private:
-    Transaction m_transaction;
-    Query m_insertShow;
-
-};
-
-class PartialUpdate : public Processor
+QByteArray databasePath()
 {
-public:
-    PartialUpdate(QSqlDatabase& database)
-        : m_transaction(database)
-        , m_deleteShow(database)
-        , m_insertShow(database)
-    {
-        m_deleteShow.prepare(Queries::deleteShow);
-        m_insertShow.prepare(Queries::insertShow);
-    }
-
-    void operator()(const Show& show) override
-    {
-        const auto key = keyOf(show);
-
-        m_deleteShow << key;
-
-        m_deleteShow.exec();
-
-        bindTo(m_insertShow, key, show);
-
-        m_insertShow.exec();
-    }
-
-    void commit()
-    {
-        m_transaction.commit();
-    }
-
-private:
-    Transaction m_transaction;
-    Query m_deleteShow;
-    Query m_insertShow;
-
-};
+    const auto path = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+    QDir().mkpath(path);
+    return QFile::encodeName(QDir(path).filePath("database"));
+}
 
 } // anonymous
 
-struct Database::PreparedQueries
-{
-    PreparedQueries(QSqlDatabase& database)
-        : selectShow(database)
-        , selectChannels(database)
-        , selectTopics(database)
-        , selectTopicsByChannel(database)
-    {
-        selectShow.prepare(Queries::selectShow);
+} // QMediathekView
 
-        selectChannels.prepare(Queries::selectChannels);
-        selectTopics.prepare(Queries::selectTopics);
-        selectTopicsByChannel.prepare(Queries::selectTopicsByChannel);
+namespace boost
+{
+namespace serialization
+{
+
+template< typename Archive >
+void serialize(Archive& archive, QMediathekView::Show& show, const unsigned int /* version */)
+{
+    // *INDENT-OFF*
+
+    archive
+    & show.channel & show.topic & show.title
+    & show.date & show.time
+    & show.duration
+    & show.description & show.website
+    & show.url
+    & show.urlSmallOffset & show.urlSmallSuffix
+    & show.urlLargeOffset & show.urlLargeSuffix;
+
+    // *INDENT-ON*
+}
+
+} // serialization
+} // boost
+
+namespace QMediathekView
+{
+
+struct Database::Data
+{
+    std::vector< Show > shows;
+
+    std::vector< std::string > showsByChannel;
+    std::vector< std::string > showsByTopic;
+    std::vector< std::string > showsByTitle;
+
+    std::vector< std::string > channels;
+    std::vector< std::pair< std::string, std::string > > topics;
+
+    void sort()
+    {
+        shows.shrink_to_fit();
+
+        std::sort(shows.begin(), shows.end(), [](const Show& lhs, const Show& rhs)
+        {
+            return operator< (
+                       std::tie(lhs.channel, rhs.date, rhs.time),
+                       std::tie(rhs.channel, lhs.date, lhs.time));
+        });
     }
 
-    Query selectShow;
+    void index()
+    {
+        showsByChannel.clear();
+        showsByChannel.reserve(shows.size());
 
-    Query selectChannels;
-    Query selectTopics;
-    Query selectTopicsByChannel;
+        showsByTopic.clear();
+        showsByTopic.reserve(shows.size());
+
+        showsByTitle.clear();
+        showsByTitle.reserve(shows.size());
+
+        channels.clear();
+        topics.clear();
+
+        for (const auto& show : shows)
+        {
+            showsByTopic.push_back(boost::to_lower_copy(show.topic));
+            showsByChannel.push_back(boost::to_lower_copy(show.channel));
+            showsByTitle.push_back(boost::to_lower_copy(show.title));
+
+            {
+                const auto pos = std::lower_bound(channels.begin(), channels.end(), show.channel);
+                if (pos == channels.end() || *pos != show.channel)
+                {
+                    channels.insert(pos, show.channel);
+                }
+            }
+
+            {
+                auto pair = std::make_pair(boost::to_lower_copy(show.channel), show.topic);
+                const auto pos = std::lower_bound(topics.begin(), topics.end(), pair);
+                if (pos == topics.end() || *pos != pair)
+                {
+                    topics.insert(pos, std::move(pair));
+                }
+            }
+        }
+
+        channels.shrink_to_fit();
+        topics.shrink_to_fit();
+    }
+
+};
+
+class Database::Transaction
+{
+public:
+    Transaction()
+        : m_data(std::make_shared< Data >())
+    {
+    }
+
+    bool load(const char* path)
+    {
+        try
+        {
+            std::ifstream file(path, std::ios::binary);
+            boost::archive::binary_iarchive archive(file);
+            archive >> m_data->shows;
+
+            return true;
+        }
+        catch (std::exception& exception)
+        {
+            qDebug() << exception.what();
+
+            return false;
+        }
+    }
+
+    bool save(const char* path)
+    {
+        try
+        {
+            std::ofstream file(path, std::ios::binary);
+            boost::archive::binary_oarchive archive(file);
+            archive << m_data->shows;
+
+            return true;
+        }
+        catch (std::exception& exception)
+        {
+            qDebug() << exception.what();
+
+            return false;
+        }
+    }
+
+    DataPtr&& commit()
+    {
+        m_data->sort();
+        m_data->index();
+
+        return std::move(m_data);
+    }
+
+protected:
+    DataPtr m_data;
+
+};
+
+struct Database::FullUpdate
+    : public Database::Transaction
+    , public Processor
+{
+    FullUpdate(const DataPtr& /* data */)
+    {
+    }
+
+    void operator()(const Show& show) override
+    {
+        m_data->shows.push_back(show);
+    }
+
+};
+
+struct Database::PartialUpdate
+    : public Database::Transaction
+    , public Processor
+{
+    PartialUpdate(const DataPtr& data)
+    {
+        m_data->shows = data->shows;
+    }
+
+    void operator()(const Show& newShow) override
+    {
+        const auto pos = std::find_if(m_data->shows.begin(), m_data->shows.end(), [&](const Show& oldShow)
+        {
+            return operator== (
+                       std::tie(newShow.title, newShow.url, newShow.channel, newShow.topic),
+                       std::tie(oldShow.title, oldShow.url, oldShow.channel, oldShow.topic));
+        });
+
+        if (pos != m_data->shows.end())
+        {
+            *pos = newShow;
+        }
+        else
+        {
+            m_data->shows.push_back(newShow);
+        }
+    }
+
 };
 
 Database::Database(Settings& settings, QObject* parent)
     : QObject(parent)
     , m_settings(settings)
-    , m_database(QSqlDatabase::addDatabase(databaseType))
+    , m_data(std::make_shared< Data >())
 {
-    const auto path = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
-    QDir().mkpath(path);
-    m_database.setDatabaseName(QDir(path).filePath(databaseName));
+    connect(&m_update, &Update::resultReadyAt, this, &Database::updateReady);
 
-    if (!m_database.open())
+    Transaction transaction;
+
+    if (transaction.load(databasePath().constData()))
     {
-        qDebug() << m_database.lastError();
-        return;
-    }
-
-    try
-    {
-        Query query(m_database);
-
-        query.exec(Queries::createShows);
-        query.exec(Queries::createShowsByKey);
-        query.exec(Queries::createShowsByText);
-
-        m_preparedQueries.reset(new PreparedQueries(m_database));
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
+        m_data = transaction.commit();
     }
 }
 
@@ -389,12 +362,13 @@ void Database::fullUpdate(const QByteArray& data)
     update< FullUpdate >(data);
 }
 
+
 void Database::partialUpdate(const QByteArray& data)
 {
     update< PartialUpdate >(data);
 }
 
-template< typename Processor >
+template< typename Transaction >
 void Database::update(const QByteArray& data)
 {
     if (m_update.isRunning())
@@ -402,229 +376,157 @@ void Database::update(const QByteArray& data)
         return;
     }
 
-    m_update = QtConcurrent::run([this, data]()
+    m_update.setFuture(QtConcurrent::run([this, data]()
     {
-        try
+        Transaction transaction(m_data);
+
+        if (!parse(data, transaction))
         {
-            Processor processor(m_database);
-
-            if (!parse(data, processor))
-            {
-                emit failedToUpdate(tr("Could not parse data."));
-                return;
-            }
-
-            processor.commit();
-
-            Query(m_database).exec(Queries::rebuildShowsByText);
-
-            m_settings.setDatabaseUpdatedOn();
-
-            emit updated();
+            return DataPtr();
         }
-        catch (QSqlError& error)
+
+        if (!transaction.save(databasePath().constData()))
         {
-            qDebug() << error;
+            return DataPtr();
         }
-    });
+
+        return transaction.commit();
+    }));
 }
 
-QVector< quintptr > Database::query(
-    const QString& channel, const QString& topic, const QString& title,
-    const SortColumn sortColumn, const Qt::SortOrder sortOrder) const
+void Database::updateReady(int index)
 {
-    QVector< quintptr > id;
+    const auto data = m_update.resultAt(index);
 
-    QString sortOrderClause;
-
-    switch (sortOrder)
+    if (!data)
     {
-    default:
-    case Qt::AscendingOrder:
-        sortOrderClause = QStringLiteral("ASC");
-        break;
-    case Qt::DescendingOrder:
-        sortOrderClause = QStringLiteral("DESC");
-        break;
+        emit failedToUpdate("Failed to parse or save data.");
+
+        return;
     }
 
-    QString sortClause;
+    m_data = data;
+
+    m_settings.setDatabaseUpdatedOn();
+
+    emit updated();
+}
+
+std::vector< quintptr > Database::query(
+    std::string channel, std::string topic, std::string title,
+    const SortColumn sortColumn, const SortOrder sortOrder) const
+{
+    std::vector< quintptr > id;
+
+    boost::to_lower(channel);
+    boost::to_lower(topic);
+    boost::to_lower(title);
+
+    if (!channel.empty())
+    {
+        collect(m_data->showsByChannel, channel, id);
+        filter(m_data->showsByTopic, topic, id);
+        filter(m_data->showsByTitle, title, id);
+    }
+    else if (!topic.empty())
+    {
+        collect(m_data->showsByTopic, topic, id);
+        filter(m_data->showsByChannel, channel, id);
+        filter(m_data->showsByTitle, title, id);
+    }
+    else if (!title.empty())
+    {
+        collect(m_data->showsByTitle, title, id);
+        filter(m_data->showsByChannel, channel, id);
+        filter(m_data->showsByTopic, topic, id);
+    }
+    else
+    {
+        id.resize(m_data->shows.size());
+        std::iota(id.begin(), id.end(), 0);
+    }
 
     switch (sortColumn)
     {
     default:
     case SortChannel:
-        sortClause = QStringLiteral("shows.channel %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
+        switch (sortOrder)
+        {
+        default:
+        case SortAscending:
+            break;
+        case SortDescending:
+            chronologicalSort(m_data->showsByChannel, sortOrder, m_data->shows, id);
+            break;
+        }
         break;
     case SortTopic:
-        sortClause = QStringLiteral("shows.topic %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
+        chronologicalSort(m_data->showsByTopic, sortOrder, m_data->shows, id);
         break;
     case SortTitle:
-        sortClause = QStringLiteral("shows.title %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
+        chronologicalSort(m_data->showsByTitle, sortOrder, m_data->shows, id);
         break;
     case SortDate:
-        sortClause = QStringLiteral("shows.date %1").arg(sortOrderClause);
+        sort(std::mem_fn(&Show::date), sortOrder, m_data->shows, id);
         break;
     case SortTime:
-        sortClause = QStringLiteral("shows.time %1").arg(sortOrderClause);
+        sort(std::mem_fn(&Show::time), sortOrder, m_data->shows, id);
         break;
     case SortDuration:
-        sortClause = QStringLiteral("shows.duration %1").arg(sortOrderClause);
+        sort(std::mem_fn(&Show::duration), sortOrder, m_data->shows, id);
         break;
-    }
-
-    QStringList filterClauses;
-
-    if(!channel.isEmpty())
-    {
-        filterClauses.append("channel : \"' || ? || '\"");
-    }
-
-    if(!topic.isEmpty())
-    {
-        filterClauses.append("topic : \"' || ? || '\"");
-    }
-
-    if(!title.isEmpty())
-    {
-        filterClauses.append("title : \"' || ? || '\"");
-    }
-
-    const auto filterClause = filterClauses.isEmpty() ? QStringLiteral("1")
-                              : QStringLiteral("showsByText MATCH '%1'").arg(filterClauses.join(QStringLiteral(" AND ")));
-
-    try
-    {
-        Query query(m_database);
-
-        if(channel.isEmpty() && topic.isEmpty() && title.isEmpty())
-        {
-            query.prepare(QStringLiteral("SELECT id FROM shows ORDER BY %1").arg(sortClause));
-        }
-        else
-        {
-            query.prepare(QStringLiteral("SELECT id"
-                                         " FROM showsByText"
-                                         " JOIN shows"
-                                         " ON showsByText.rowid = shows.id"
-                                         " WHERE %1 ORDER BY %4")
-                          .arg(filterClause).arg(sortClause));
-
-            if(!channel.isEmpty())
-            {
-                query << channel;
-            }
-
-            if(!topic.isEmpty())
-            {
-                query << topic;
-            }
-
-            if(!title.isEmpty())
-            {
-                query << title;
-            }
-        }
-
-        query.exec();
-
-        while (query.nextRecord())
-        {
-            id.append(query.nextValue< quintptr >());
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
     }
 
     return id;
 }
 
-std::unique_ptr< Show > Database::show(const quintptr id) const
+std::shared_ptr< const Show > Database::show(const quintptr id) const
 {
-    std::unique_ptr< Show > show(new Show);
-
-    try
-    {
-        Query& query = m_preparedQueries->selectShow << id;
-
-        query.exec();
-
-        if (query.nextRecord())
-        {
-            show->channel = query.nextValue< QString >();
-            show->topic = query.nextValue< QString >();
-            show->title = query.nextValue< QString >();
-
-            show->date =  QDate::fromJulianDay(query.nextValue< qint64 >());
-            show->time = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
-
-            show->duration = QTime::fromMSecsSinceStartOfDay(query.nextValue< int >());
-
-            show->description = query.nextValue< QString >();
-            show->website = query.nextValue< QString >();
-
-            show->url = query.nextValue< QString >();
-
-            show->urlSmallOffset = query.nextValue< unsigned short >();
-            show->urlSmallSuffix = query.nextValue< QString >();
-
-            show->urlLargeOffset = query.nextValue< unsigned short >();
-            show->urlLargeSuffix = query.nextValue< QString >();
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return show;
+    return { m_data, &m_data->shows.at(id) };
 }
 
-QStringList Database::channels() const
+std::vector< std::string > Database::channels() const
 {
-    QStringList channels;
-
-    try
-    {
-        Query& query = m_preparedQueries->selectChannels;
-
-        query.exec();
-
-        while (query.nextRecord())
-        {
-            channels.append(query.nextValue< QString >());
-        }
-    }
-    catch (QSqlError& error)
-    {
-        qDebug() << error;
-    }
-
-    return channels;
+    return m_data->channels;
 }
 
-QStringList Database::topics(const QString& channel) const
+std::vector< std::string > Database::topics(std::string channel) const
 {
-    QStringList topics;
+    std::vector< std::string > topics;
 
-    try
+    boost::to_lower(channel);
+
+    if (!channel.empty())
     {
-        Query& query = channel.isEmpty()
-                       ? m_preparedQueries->selectTopics
-                       : m_preparedQueries->selectTopicsByChannel << channel;
-
-        query.exec();
-
-        while (query.nextRecord())
+        struct Comparator
         {
-            topics.append(query.nextValue< QString >());
+            bool operator()(const std::pair< std::string, std::string >& pair, const std::string& string) const
+            {
+                return pair.first < string;
+            }
+
+            bool operator()(const std::string& string, const std::pair< std::string, std::string >& pair) const
+            {
+                return string < pair.first;
+            }
+
+        };
+
+        const auto range = std::equal_range(m_data->topics.begin(), m_data->topics.end(), channel, Comparator());
+
+        for (auto iterator = range.first; iterator != range.second; ++iterator)
+        {
+            topics.push_back(iterator->second);
         }
     }
-    catch (QSqlError& error)
+    else
     {
-        qDebug() << error;
+        topics.reserve(m_data->topics.size());
+
+        for (const auto& pair : m_data->topics)
+        {
+            topics.push_back(pair.second);
+        }
     }
 
     return topics;
