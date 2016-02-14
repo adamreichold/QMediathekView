@@ -47,9 +47,9 @@ class DownloadDialog : public QDialog
 public:
     DownloadDialog(
         const Settings& settings,
-        const Model& model,
-        const QModelIndex& index,
         QNetworkAccessManager* networkManager,
+        const QString& title,
+        const QUrl& url,
         QWidget* parent = 0);
     ~DownloadDialog();
 
@@ -66,21 +66,14 @@ private:
 private:
     const Settings& m_settings;
 
-    const QString m_url;
-    const QString m_urlLarge;
-    const QString m_urlSmall;
-
-    QUrl selectedUrl() const;
+    const QString m_title;
+    const QUrl m_url;
 
     QNetworkAccessManager* m_networkManager;
     QNetworkReply* m_networkReply;
     QFile* m_file;
 
     QLineEdit* m_filePathEdit;
-
-    QRadioButton* m_defaultButton;
-    QRadioButton* m_smallButton;
-    QRadioButton* m_largeButton;
 
     QPushButton* m_startButton;
     QPushButton* m_cancelButton;

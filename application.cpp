@@ -114,7 +114,7 @@ Application::Application(int& argc, char** argv)
     , m_database(new Database(*m_settings, this))
     , m_model(new Model(*m_database, this))
     , m_networkManager(new QNetworkAccessManager(this))
-    , m_mainWindow(new MainWindow(*m_settings, *m_model))
+    , m_mainWindow(new MainWindow(*m_settings, *m_model, *this))
 {
     connect(m_database, &Database::updated, m_model, &Model::update);
 
@@ -128,11 +128,6 @@ Application::Application(int& argc, char** argv)
     connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
     connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
     connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
-
-    connect(m_mainWindow, &MainWindow::databaseUpdateRequested, this, &Application::updateDatabase);
-
-    connect(m_mainWindow, &MainWindow::playRequested, this, &Application::play);
-    connect(m_mainWindow, &MainWindow::downloadRequested, this, &Application::download);
 }
 
 Application::~Application()
@@ -149,57 +144,44 @@ int Application::exec()
     return QApplication::exec();
 }
 
-void Application::play(const QModelIndex& index)
+void Application::playPreferred(const QModelIndex& index) const
 {
-    auto firstUrl = &Model::url;
-    auto secondUrl = &Model::urlSmall;
-    auto thirdUrl = &Model::urlLarge;
-
-    switch (m_settings->preferredUrl())
-    {
-    default:
-    case Url::Default:
-        break;
-    case Url::Small:
-        firstUrl = &Model::urlSmall;
-        secondUrl = &Model::url;
-        thirdUrl = &Model::urlLarge;
-        break;
-    case Url::Large:
-        firstUrl = &Model::urlLarge;
-        secondUrl = &Model::url;
-        thirdUrl = &Model::urlSmall;
-        break;
-    }
-
-    auto url = (m_model->*firstUrl)(index);
-
-    if (url.isEmpty())
-    {
-        url = (m_model->*secondUrl)(index);
-    }
-
-    if (url.isEmpty())
-    {
-        url = (m_model->*thirdUrl)(index);
-    }
-
-    if (!QProcess::startDetached(m_settings->playCommand().arg(url)))
-    {
-        QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
-    }
+    startPlay(preferredUrl(index));
 }
 
-void Application::download(const QModelIndex& index)
+void Application::playDefault(const QModelIndex& index) const
 {
-    const auto dialog = new DownloadDialog(
-        *m_settings,
-        *m_model,
-        index,
-        m_networkManager);
+    startPlay(m_model->url(index));
+}
 
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
+void Application::playSmall(const QModelIndex& index) const
+{
+    startPlay(m_model->urlSmall(index));
+}
+
+void Application::playLarge(const QModelIndex& index) const
+{
+    startPlay(m_model->urlLarge(index));
+}
+
+void Application::downloadPreferred(const QModelIndex& index) const
+{
+    startDownload(m_model->title(index), preferredUrl(index));
+}
+
+void Application::downloadDefault(const QModelIndex& index) const
+{
+    startDownload(m_model->title(index), m_model->url(index));
+}
+
+void Application::downloadSmall(const QModelIndex& index) const
+{
+    startDownload(m_model->title(index), m_model->urlSmall(index));
+}
+
+void Application::downloadLarge(const QModelIndex& index) const
+{
+    startDownload(m_model->title(index), m_model->urlLarge(index));
 }
 
 void Application::checkUpdateMirrors()
@@ -275,6 +257,62 @@ void Application::updateDatabase()
             m_database->partialUpdate(data);
         });
     }
+}
+
+QString Application::preferredUrl(const QModelIndex& index) const
+{
+    auto firstUrl = &Model::url;
+    auto secondUrl = &Model::urlSmall;
+    auto thirdUrl = &Model::urlLarge;
+
+    switch (m_settings->preferredUrl())
+    {
+    default:
+    case Url::Default:
+        break;
+    case Url::Small:
+        firstUrl = &Model::urlSmall;
+        secondUrl = &Model::url;
+        thirdUrl = &Model::urlLarge;
+        break;
+    case Url::Large:
+        firstUrl = &Model::urlLarge;
+        secondUrl = &Model::url;
+        thirdUrl = &Model::urlSmall;
+        break;
+    }
+
+    auto url = (m_model->*firstUrl)(index);
+
+    if (url.isEmpty())
+    {
+        url = (m_model->*secondUrl)(index);
+    }
+
+    if (url.isEmpty())
+    {
+        url = (m_model->*thirdUrl)(index);
+    }
+
+    return url;
+}
+
+void Application::startPlay(const QString& url) const
+{
+    if (!QProcess::startDetached(m_settings->playCommand().arg(url)))
+    {
+        QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
+    }
+}
+
+void Application::startDownload(const QString& title, const QUrl& url) const
+{
+    const auto dialog = new DownloadDialog(
+        *m_settings, m_networkManager,
+        title, url);
+
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 template< typename Consumer >

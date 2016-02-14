@@ -55,15 +55,27 @@ signals:
 public:
     int exec();
 
-    void play(const QModelIndex& index);
-    void download(const QModelIndex& index);
+    void playPreferred(const QModelIndex& index) const;
+    void playDefault(const QModelIndex& index) const;
+    void playSmall(const QModelIndex& index) const;
+    void playLarge(const QModelIndex& index) const;
+
+    void downloadPreferred(const QModelIndex& index) const;
+    void downloadDefault(const QModelIndex& index) const;
+    void downloadSmall(const QModelIndex& index) const;
+    void downloadLarge(const QModelIndex& index) const;
 
     void checkUpdateMirrors();
     void checkUpdateDatabase();
 
-private:
     void updateMirrors();
     void updateDatabase();
+
+private:
+    QString preferredUrl(const QModelIndex& index) const;
+
+    void startPlay(const QString& url) const;
+    void startDownload(const QString& title, const QUrl& url) const;
 
     template< typename Consumer >
     void downloadMirrors(const QString& url, const Consumer& consumer);

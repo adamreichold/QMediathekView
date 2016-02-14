@@ -36,6 +36,8 @@ namespace QMediathekView
 
 class Settings;
 class Model;
+class UrlButton;
+class Application;
 
 class MainWindow : public QMainWindow
 {
@@ -43,14 +45,8 @@ class MainWindow : public QMainWindow
     Q_DISABLE_COPY(MainWindow)
 
 public:
-    MainWindow(Settings& settings, Model& model, QWidget* parent = 0);
+    MainWindow(Settings& settings, Model& model, Application& application, QWidget* parent = 0);
     ~MainWindow();
-
-signals:
-    void databaseUpdateRequested();
-
-    void playRequested(const QModelIndex& index);
-    void downloadRequested(const QModelIndex& index);
 
 public:
     void showStartedMirrorsUpdate();
@@ -66,8 +62,15 @@ private:
     void updateDatabasePressed();
     void editSettingsPressed();
 
-    void playPressed();
-    void downloadPressed();
+    void playClicked();
+    void playDefaultTriggered();
+    void playSmallTriggered();
+    void playLargeTriggered();
+
+    void downloadClicked();
+    void downloadDefaultTriggered();
+    void downloadSmallTriggered();
+    void downloadLargeTriggered();
 
     void timeout();
     void activated(const QModelIndex& index);
@@ -76,6 +79,7 @@ private:
 private:
     Settings& m_settings;
     Model& m_model;
+    Application& m_application;
 
     QTableView* m_tableView;
 
@@ -87,6 +91,9 @@ private:
 
     QTextEdit* m_descriptionEdit;
     QLabel* m_websiteLabel;
+
+    UrlButton* m_playButton;
+    UrlButton* m_downloadButton;
 
 };
 

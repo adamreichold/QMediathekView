@@ -19,6 +19,7 @@ SOURCES += \
     parser.cpp \
     database.cpp \
     model.cpp \
+    miscellaneous.cpp \
     mainwindow.cpp \
     downloaddialog.cpp \
     settingsdialog.cpp \
@@ -30,6 +31,7 @@ HEADERS += \
     parser.h \
     database.h \
     model.h \
+    miscellaneous.h \
     mainwindow.h \
     downloaddialog.h \
     settingsdialog.h \

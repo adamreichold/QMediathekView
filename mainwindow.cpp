@@ -37,7 +37,9 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "settings.h"
 #include "model.h"
+#include "miscellaneous.h"
 #include "settingsdialog.h"
+#include "application.h"
 
 namespace
 {
@@ -52,15 +54,27 @@ constexpr auto searchTimeout = 200;
 constexpr auto minimumChannelLength = 4;
 constexpr auto minimumTopicLength = 12;
 
+template< typename Action >
+void forEachSelectedRow(const QAbstractItemView* view, Action action)
+{
+    const auto selectedRows = view->selectionModel()->selectedRows();
+
+    for (const auto& index : selectedRows)
+    {
+        action(index);
+    }
+}
+
 } // anonymous
 
 namespace QMediathekView
 {
 
-MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
+MainWindow::MainWindow(Settings& settings, Model& model, Application& application, QWidget* parent)
     : QMainWindow(parent)
     , m_settings(settings)
     , m_model(model)
+    , m_application(application)
 {
     m_tableView = new QTableView(this);
     m_tableView->setModel(&m_model);
@@ -164,14 +178,25 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     m_websiteLabel->setOpenExternalLinks(true);
     detailsLayout->addWidget(m_websiteLabel, 3, 1);
 
-    const auto playButton = new QPushButton(QIcon::fromTheme(QStringLiteral("media-playback-start")), QString(), detailsWidget);
-    detailsLayout->addWidget(playButton, 0, 0);
+    m_playButton = new UrlButton(m_model, detailsWidget);
+    m_playButton->setIcon(QIcon::fromTheme(QStringLiteral("media-playback-start")));
+    detailsLayout->addWidget(m_playButton, 0, 0);
 
-    const auto downloadButton = new QPushButton(QIcon::fromTheme(QStringLiteral("media-record")), QString(), detailsWidget);
-    detailsLayout->addWidget(downloadButton, 1, 0);
+    connect(m_playButton, &UrlButton::clicked, this, &MainWindow::playClicked);
+    connect(m_playButton, &UrlButton::defaultTriggered, this, &MainWindow::playDefaultTriggered);
+    connect(m_playButton, &UrlButton::smallTriggered, this, &MainWindow::playSmallTriggered);
+    connect(m_playButton, &UrlButton::largeTriggered, this, &MainWindow::playLargeTriggered);
+    connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, m_playButton, &UrlButton::currentChanged);
 
-    connect(playButton, &QPushButton::pressed, this, &MainWindow::playPressed);
-    connect(downloadButton, &QPushButton::pressed, this, &MainWindow::downloadPressed);
+    m_downloadButton = new UrlButton(m_model, detailsWidget);
+    m_downloadButton->setIcon(QIcon::fromTheme(QStringLiteral("media-record")));
+    detailsLayout->addWidget(m_downloadButton, 1, 0);
+
+    connect(m_downloadButton, &UrlButton::clicked, this, &MainWindow::downloadClicked);
+    connect(m_downloadButton, &UrlButton::defaultTriggered, this, &MainWindow::downloadDefaultTriggered);
+    connect(m_downloadButton, &UrlButton::smallTriggered, this, &MainWindow::downloadSmallTriggered);
+    connect(m_downloadButton, &UrlButton::largeTriggered, this, &MainWindow::downloadLargeTriggered);
+    connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, m_downloadButton, &UrlButton::currentChanged);
 
     const auto quitShortcut = new QShortcut(QKeySequence::Quit, this);
     connect(quitShortcut, &QShortcut::activated, this, &MainWindow::close);
@@ -227,7 +252,7 @@ void MainWindow::resetFilterPressed()
 
 void MainWindow::updateDatabasePressed()
 {
-    emit databaseUpdateRequested();
+    m_application.updateDatabase();
 }
 
 void MainWindow::editSettingsPressed()
@@ -235,19 +260,56 @@ void MainWindow::editSettingsPressed()
     SettingsDialog(m_settings, this).exec();
 }
 
-void MainWindow::playPressed()
+void MainWindow::playClicked()
 {
-    emit playRequested(m_tableView->currentIndex());
+    m_application.playPreferred(m_tableView->currentIndex());
 }
 
-void MainWindow::downloadPressed()
+void MainWindow::playDefaultTriggered()
 {
-    const auto selectedRows = m_tableView->selectionModel()->selectedRows();
+    m_application.playDefault(m_tableView->currentIndex());
+}
 
-    for (const auto& index : selectedRows)
+void MainWindow::playSmallTriggered()
+{
+    m_application.playSmall(m_tableView->currentIndex());
+}
+
+void MainWindow::playLargeTriggered()
+{
+    m_application.playLarge(m_tableView->currentIndex());
+}
+
+void MainWindow::downloadClicked()
+{
+    forEachSelectedRow(m_tableView, [this](const QModelIndex& index)
     {
-        emit downloadRequested(index);
-    }
+        m_application.downloadPreferred(index);
+    });
+}
+
+void MainWindow::downloadDefaultTriggered()
+{
+    forEachSelectedRow(m_tableView, [this](const QModelIndex& index)
+    {
+        m_application.downloadDefault(index);
+    });
+}
+
+void MainWindow::downloadSmallTriggered()
+{
+    forEachSelectedRow(m_tableView, [this](const QModelIndex& index)
+    {
+        m_application.downloadSmall(index);
+    });
+}
+
+void MainWindow::downloadLargeTriggered()
+{
+    forEachSelectedRow(m_tableView, [this](const QModelIndex& index)
+    {
+        m_application.downloadLarge(index);
+    });
 }
 
 void MainWindow::timeout()
@@ -263,7 +325,7 @@ void MainWindow::timeout()
 
 void MainWindow::activated(const QModelIndex& index)
 {
-    emit playRequested(index);
+    m_application.playPreferred(index);
 }
 
 void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /* previous */)
