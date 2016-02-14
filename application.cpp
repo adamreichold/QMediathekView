@@ -24,6 +24,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <random>
 
+#include <QDesktopServices>
 #include <QDomDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -299,20 +300,41 @@ QString Application::preferredUrl(const QModelIndex& index) const
 
 void Application::startPlay(const QString& url) const
 {
-    if (!QProcess::startDetached(m_settings->playCommand().arg(url)))
+    const auto command = m_settings->playCommand();
+
+    if (!command.isEmpty())
     {
-        QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
+        if (!QProcess::startDetached(command.arg(url)))
+        {
+            QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
+        }
+    }
+    else
+    {
+        QDesktopServices::openUrl(url);
     }
 }
 
-void Application::startDownload(const QString& title, const QUrl& url) const
+void Application::startDownload(const QString& title, const QString& url) const
 {
-    const auto dialog = new DownloadDialog(
-        *m_settings, m_networkManager,
-        title, url);
+    const auto command = m_settings->downloadCommand();
 
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
+    if (!command.isEmpty())
+    {
+        if (!QProcess::startDetached(command.arg(url)))
+        {
+            QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute download command."));
+        }
+    }
+    else
+    {
+        const auto dialog = new DownloadDialog(
+            *m_settings, m_networkManager,
+            title, url);
+
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+    }
 }
 
 template< typename Consumer >

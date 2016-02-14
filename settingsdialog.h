@@ -55,6 +55,8 @@ private:
     QSpinBox* m_databaseUpdateAfterHoursBox;
 
     QLineEdit* m_playCommandEdit;
+    QLineEdit* m_downloadCommandEdit;
+
     QLineEdit* m_downloadFolderEdit;
 
     QComboBox* m_preferredUrlBox;

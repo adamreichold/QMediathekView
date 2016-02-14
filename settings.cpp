@@ -48,6 +48,8 @@ DEFINE_KEY(mirrorsUpdatedOn);
 DEFINE_KEY(databaseUpdatedOn);
 
 DEFINE_KEY(playCommand);
+DEFINE_KEY(downloadCommand);
+
 DEFINE_KEY(downloadFolder);
 
 DEFINE_KEY(preferredUrl);
@@ -71,6 +73,7 @@ constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
 
 const auto playCommand = QStringLiteral("vlc %1");
+
 const auto downloadFolder = QDir::homePath();
 
 constexpr auto preferredUrl = Url::Default;
@@ -174,6 +177,16 @@ QString Settings::playCommand() const
 void Settings::setPlayCommand(const QString& command)
 {
     m_settings->setValue(Keys::playCommand, command);
+}
+
+QString Settings::downloadCommand() const
+{
+    return m_settings->value(Keys::downloadCommand).toString();
+}
+
+void Settings::setDownloadCommand(const QString& command)
+{
+    m_settings->setValue(Keys::downloadCommand, command);
 }
 
 QDir Settings::downloadFolder() const

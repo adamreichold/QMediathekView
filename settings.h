@@ -69,6 +69,9 @@ public:
     QString playCommand() const;
     void setPlayCommand(const QString& command);
 
+    QString downloadCommand() const;
+    void setDownloadCommand(const QString& command);
+
     QDir downloadFolder() const;
     void setDownloadFolder(const QDir& folder);
 

@@ -75,7 +75,7 @@ private:
     QString preferredUrl(const QModelIndex& index) const;
 
     void startPlay(const QString& url) const;
-    void startDownload(const QString& title, const QUrl& url) const;
+    void startDownload(const QString& title, const QString& url) const;
 
     template< typename Consumer >
     void downloadMirrors(const QString& url, const Consumer& consumer);

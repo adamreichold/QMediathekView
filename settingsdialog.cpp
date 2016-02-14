@@ -61,6 +61,10 @@ SettingsDialog::SettingsDialog(
     m_playCommandEdit->setText(m_settings.playCommand());
     layout->addRow(tr("Play command"), m_playCommandEdit);
 
+    m_downloadCommandEdit = new QLineEdit(this);
+    m_downloadCommandEdit->setText(m_settings.downloadCommand());
+    layout->addRow(tr("Download command"), m_downloadCommandEdit);
+
     m_downloadFolderEdit = new QLineEdit(this);
     m_downloadFolderEdit->setText(m_settings.downloadFolder().absolutePath());
     layout->addRow(tr("Download folder"), m_downloadFolderEdit);
@@ -94,6 +98,8 @@ void SettingsDialog::accept()
     m_settings.setDatabaseUpdateAfterHours(m_databaseUpdateAfterHoursBox->value());
 
     m_settings.setPlayCommand(m_playCommandEdit->text());
+    m_settings.setDownloadCommand(m_downloadCommandEdit->text());
+
     m_settings.setDownloadFolder(m_downloadFolderEdit->text());
 
     m_settings.setPreferredUrl(Url(m_preferredUrlBox->currentData().toInt()));
