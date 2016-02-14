@@ -48,7 +48,7 @@ struct Show
 
     QString urlSmall() const
     {
-        return url.left(urlSmallOffset) + urlSmallSuffix;
+        return url.left(urlSmallOffset).append(urlSmallSuffix);
     }
 
     unsigned short urlLargeOffset = 0;
@@ -56,7 +56,7 @@ struct Show
 
     QString urlLarge() const
     {
-        return url.left(urlLargeOffset) + urlLargeSuffix;
+        return url.left(urlLargeOffset).append(urlLargeSuffix);
     }
 
 };

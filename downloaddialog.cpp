@@ -97,6 +97,8 @@ DownloadDialog::~DownloadDialog()
 {
     if (m_networkReply)
     {
+        m_networkReply->abort();
+
         delete m_networkReply;
         m_networkReply = nullptr;
     }
