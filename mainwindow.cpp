@@ -69,7 +69,8 @@ MainWindow::MainWindow(Settings& settings, Model& model, QWidget* parent)
     m_tableView->setAlternatingRowColors(true);
     m_tableView->sortByColumn(0, Qt::AscendingOrder);
     m_tableView->setSortingEnabled(true);
-    m_tableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_tableView->setTabKeyNavigation(false);
+    m_tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_tableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -221,7 +222,7 @@ void MainWindow::resetFilterPressed()
 {
     m_channelBox->clearEditText();
     m_topicBox->clearEditText();
-    m_titleEdit->clear();;
+    m_titleEdit->clear();
 }
 
 void MainWindow::updateDatabasePressed()
@@ -241,7 +242,12 @@ void MainWindow::playPressed()
 
 void MainWindow::downloadPressed()
 {
-    emit downloadRequested(m_tableView->currentIndex());
+    const auto selectedRows = m_tableView->selectionModel()->selectedRows();
+
+    for (const auto& index : selectedRows)
+    {
+        emit downloadRequested(index);
+    }
 }
 
 void MainWindow::timeout()
