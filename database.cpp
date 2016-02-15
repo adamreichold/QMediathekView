@@ -46,13 +46,45 @@ namespace QMediathekView
 namespace
 {
 
+void rank(const std::vector< std::string >& column, std::vector< std::uint32_t >& rank)
+{
+    const auto size = column.size();
+
+    std::vector< std::size_t > order(size);
+    std::iota(order.begin(), order.end(), std::size_t(0));
+
+    std::sort(order.begin(), order.end(), [&](const std::size_t lhs, const std::size_t rhs)
+    {
+        return column[lhs] < column[rhs];
+    });
+
+    rank.resize(size);
+
+    std::string lastValue;
+    std::uint32_t nextRank = 0;
+
+    for (const auto& index : order)
+    {
+        const auto& value = column[index];
+
+        if (lastValue != value)
+        {
+            lastValue = value;
+
+            ++nextRank;
+        }
+
+        rank[index] = nextRank;
+    }
+}
+
 void collect(
-    const std::vector< std::string >& showsByKey, const std::string& key,
+    const std::vector< std::string >& column, const std::string& key,
     std::vector< quintptr >& id)
 {
-    for (std::size_t index = 0, count = showsByKey.size(); index < count; ++index)
+    for (std::size_t index = 0, count = column.size(); index < count; ++index)
     {
-        if (showsByKey.at(index).find(key) != std::string::npos)
+        if (column[index].find(key) != std::string::npos)
         {
             id.push_back(index);
         }
@@ -60,7 +92,7 @@ void collect(
 }
 
 void filter(
-    const std::vector< std::string >& showsByKey, const std::string& key,
+    const std::vector< std::string >& column, const std::string& key,
     std::vector< quintptr >& id)
 {
     if (key.empty())
@@ -70,7 +102,7 @@ void filter(
 
     id.erase(std::remove_if(id.begin(), id.end(), [&](const quintptr index)
     {
-        return showsByKey.at(index).find(key) == std::string::npos;
+        return column[index].find(key) == std::string::npos;
     }), id.end());
 }
 
@@ -85,20 +117,20 @@ void sort(
     case Database::SortAscending:
         std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
         {
-            return member(shows.at(lhs)) < member(shows.at(rhs));
+            return member(shows[lhs]) < member(shows[rhs]);
         });
         break;
     case Database::SortDescending:
         std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
         {
-            return member(shows.at(rhs)) < member(shows.at(lhs));
+            return member(shows[rhs]) < member(shows[lhs]);
         });
         break;
     }
 }
 
 void chronologicalSort(
-    const std::vector< std::string >& showsByKey, const Database::SortOrder sortOrder,
+    const std::vector< std::uint32_t >& rank, const Database::SortOrder sortOrder,
     const std::vector< Show >& shows, std::vector< quintptr >& id)
 {
     switch (sortOrder)
@@ -107,23 +139,23 @@ void chronologicalSort(
     case Database::SortAscending:
         std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
         {
-            const auto& lhs_ = shows.at(lhs);
-            const auto& rhs_ = shows.at(rhs);
+            const auto& lhs_ = shows[lhs];
+            const auto& rhs_ = shows[rhs];
 
             return operator< (
-                       std::tie(showsByKey.at(lhs), rhs_.date, rhs_.time),
-                       std::tie(showsByKey.at(rhs), lhs_.date, lhs_.time));
+                       std::tie(rank[lhs], rhs_.date, rhs_.time),
+                       std::tie(rank[rhs], lhs_.date, lhs_.time));
         });
         break;
     case Database::SortDescending:
         std::sort(id.begin(), id.end(), [&](const std::size_t lhs, const std::size_t rhs)
         {
-            const auto& lhs_ = shows.at(lhs);
-            const auto& rhs_ = shows.at(rhs);
+            const auto& lhs_ = shows[lhs];
+            const auto& rhs_ = shows[rhs];
 
             return operator< (
-                       std::tie(showsByKey.at(rhs), rhs_.date, rhs_.time),
-                       std::tie(showsByKey.at(lhs), lhs_.date, lhs_.time));
+                       std::tie(rank[rhs], rhs_.date, rhs_.time),
+                       std::tie(rank[lhs], lhs_.date, lhs_.time));
         });
         break;
     }
@@ -172,12 +204,13 @@ struct Database::Data
 {
     std::vector< Show > shows;
 
-    std::vector< std::string > showsByChannel;
-    std::vector< std::string > showsByTopic;
-    std::vector< std::string > showsByTitle;
+    std::vector< std::string > channelLower;
+    std::vector< std::string > topicLower;
+    std::vector< std::string > titleLower;
 
-    std::vector< std::string > channels;
-    std::vector< std::pair< std::string, std::string > > topics;
+    std::vector< std::uint32_t > channelRank;
+    std::vector< std::uint32_t > topicRank;
+    std::vector< std::uint32_t > titleRank;
 
     void sort()
     {
@@ -193,44 +226,20 @@ struct Database::Data
 
     void index()
     {
-        showsByChannel.clear();
-        showsByChannel.reserve(shows.size());
-
-        showsByTopic.clear();
-        showsByTopic.reserve(shows.size());
-
-        showsByTitle.clear();
-        showsByTitle.reserve(shows.size());
-
-        channels.clear();
-        topics.clear();
+        channelLower.reserve(shows.size());
+        topicLower.reserve(shows.size());
+        titleLower.reserve(shows.size());
 
         for (const auto& show : shows)
         {
-            showsByTopic.push_back(boost::to_lower_copy(show.topic));
-            showsByChannel.push_back(boost::to_lower_copy(show.channel));
-            showsByTitle.push_back(boost::to_lower_copy(show.title));
-
-            {
-                const auto pos = std::lower_bound(channels.begin(), channels.end(), show.channel);
-                if (pos == channels.end() || *pos != show.channel)
-                {
-                    channels.insert(pos, show.channel);
-                }
-            }
-
-            {
-                auto pair = std::make_pair(boost::to_lower_copy(show.channel), show.topic);
-                const auto pos = std::lower_bound(topics.begin(), topics.end(), pair);
-                if (pos == topics.end() || *pos != pair)
-                {
-                    topics.insert(pos, std::move(pair));
-                }
-            }
+            channelLower.push_back(boost::to_lower_copy(show.channel));
+            topicLower.push_back(boost::to_lower_copy(show.topic));
+            titleLower.push_back(boost::to_lower_copy(show.title));
         }
 
-        channels.shrink_to_fit();
-        topics.shrink_to_fit();
+        rank(channelLower, channelRank);
+        rank(topicLower, topicRank);
+        rank(titleLower, titleRank);
     }
 
 };
@@ -424,26 +433,26 @@ std::vector< quintptr > Database::query(
 
     if (!channel.empty())
     {
-        collect(m_data->showsByChannel, channel, id);
-        filter(m_data->showsByTopic, topic, id);
-        filter(m_data->showsByTitle, title, id);
+        collect(m_data->channelLower, channel, id);
+        filter(m_data->topicLower, topic, id);
+        filter(m_data->titleLower, title, id);
     }
     else if (!topic.empty())
     {
-        collect(m_data->showsByTopic, topic, id);
-        filter(m_data->showsByChannel, channel, id);
-        filter(m_data->showsByTitle, title, id);
+        collect(m_data->topicLower, topic, id);
+        filter(m_data->channelLower, channel, id);
+        filter(m_data->titleLower, title, id);
     }
     else if (!title.empty())
     {
-        collect(m_data->showsByTitle, title, id);
-        filter(m_data->showsByChannel, channel, id);
-        filter(m_data->showsByTopic, topic, id);
+        collect(m_data->titleLower, title, id);
+        filter(m_data->channelLower, channel, id);
+        filter(m_data->topicLower, topic, id);
     }
     else
     {
         id.resize(m_data->shows.size());
-        std::iota(id.begin(), id.end(), 0);
+        std::iota(id.begin(), id.end(), std::size_t(0));
     }
 
     switch (sortColumn)
@@ -456,15 +465,15 @@ std::vector< quintptr > Database::query(
         case SortAscending:
             break;
         case SortDescending:
-            chronologicalSort(m_data->showsByChannel, sortOrder, m_data->shows, id);
+            chronologicalSort(m_data->channelRank, sortOrder, m_data->shows, id);
             break;
         }
         break;
     case SortTopic:
-        chronologicalSort(m_data->showsByTopic, sortOrder, m_data->shows, id);
+        chronologicalSort(m_data->topicRank, sortOrder, m_data->shows, id);
         break;
     case SortTitle:
-        chronologicalSort(m_data->showsByTitle, sortOrder, m_data->shows, id);
+        chronologicalSort(m_data->titleRank, sortOrder, m_data->shows, id);
         break;
     case SortDate:
         sort(std::mem_fn(&Show::date), sortOrder, m_data->shows, id);
@@ -487,7 +496,19 @@ std::shared_ptr< const Show > Database::show(const quintptr id) const
 
 std::vector< std::string > Database::channels() const
 {
-    return m_data->channels;
+    std::vector< std::string > channels;
+
+    for (const auto& show : m_data->shows)
+    {
+        const auto& channel = show.channel;
+        const auto pos = std::lower_bound(channels.begin(), channels.end(), channel);
+        if (pos == channels.end() || *pos != channel)
+        {
+            channels.insert(pos, channel);
+        }
+    }
+
+    return channels;
 }
 
 std::vector< std::string > Database::topics(std::string channel) const
@@ -496,36 +517,33 @@ std::vector< std::string > Database::topics(std::string channel) const
 
     boost::to_lower(channel);
 
-    if (!channel.empty())
+    if (channel.empty())
     {
-        struct Comparator
+        for (const auto& show : m_data->shows)
         {
-            bool operator()(const std::pair< std::string, std::string >& pair, const std::string& string) const
+            const auto& topic = show.topic;
+            const auto pos = std::lower_bound(topics.begin(), topics.end(), topic);
+            if (pos == topics.end() || *pos != topic)
             {
-                return pair.first < string;
+                topics.insert(pos, topic);
             }
-
-            bool operator()(const std::string& string, const std::pair< std::string, std::string >& pair) const
-            {
-                return string < pair.first;
-            }
-
-        };
-
-        const auto range = std::equal_range(m_data->topics.begin(), m_data->topics.end(), channel, Comparator());
-
-        for (auto iterator = range.first; iterator != range.second; ++iterator)
-        {
-            topics.push_back(iterator->second);
         }
     }
     else
     {
-        topics.reserve(m_data->topics.size());
-
-        for (const auto& pair : m_data->topics)
+        for (std::size_t index = 0, count = m_data->shows.size(); index < count; ++index)
         {
-            topics.push_back(pair.second);
+            if (m_data->channelLower[index].find(channel) == std::string::npos)
+            {
+                continue;
+            }
+
+            const auto& topic = m_data->shows[index].topic;
+            const auto pos = std::lower_bound(topics.begin(), topics.end(), topic);
+            if (pos == topics.end() || *pos != topic)
+            {
+                topics.insert(pos, topic);
+            }
         }
     }
 
