@@ -27,8 +27,6 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 class QStringListModel;
 
-#include "schema.h"
-
 namespace QMediathekView
 {
 

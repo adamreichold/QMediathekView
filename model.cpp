@@ -21,6 +21,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "model.h"
 
+#include <QDateTime>
 #include <QStringListModel>
 
 #include "database.h"
@@ -28,8 +29,17 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 namespace
 {
 
-constexpr auto cacheSize = 1024;
 constexpr auto fetchSize = 256;
+
+QString formatDate(const boost::gregorian::date& date, const QString& format)
+{
+    return QDate::fromJulianDay(date.day_number()).toString(format);
+}
+
+QString formatTime(const boost::posix_time::time_duration& time, const QString& format)
+{
+    return QTime::fromMSecsSinceStartOfDay(time.total_milliseconds()).toString(format);
+}
 
 } // anonymous
 
@@ -38,7 +48,6 @@ namespace QMediathekView
 
 Model::Model(Database& database, QObject* parent) : QAbstractTableModel(parent),
     m_database(database),
-    m_cache(cacheSize),
     m_channels(new QStringListModel(this)),
     m_topics(new QStringListModel(this))
 {
@@ -112,7 +121,7 @@ QModelIndex Model::index(int row, int column, const QModelIndex& parent) const
         return {};
     }
 
-    if (row < 0 || row >= m_id.size())
+    if (row < 0 || row >= static_cast< int >(m_id.size()))
     {
         return {};
     }
@@ -138,17 +147,17 @@ QVariant Model::data(const QModelIndex& index, int role) const
     switch (column)
     {
     case 0:
-        return fetchShow(id, std::mem_fn(&Show::channel));
+        return QString::fromStdString(m_database.channel(id));
     case 1:
-        return fetchShow(id, std::mem_fn(&Show::topic));
+        return QString::fromStdString(m_database.topic(id));
     case 2:
-        return fetchShow(id, std::mem_fn(&Show::title));
+        return QString::fromStdString(m_database.title(id));
     case 3:
-        return fetchShow(id, std::mem_fn(&Show::date)).toString(tr("dd.MM.yy"));
+        return formatDate(m_database.date(id), tr("dd.MM.yy"));
     case 4:
-        return fetchShow(id, std::mem_fn(&Show::time)).toString(tr("hh:mm"));
+        return formatTime(m_database.time(id), tr("hh:mm"));
     case 5:
-        return fetchShow(id, std::mem_fn(&Show::duration)).toString(tr("hh:mm:ss"));
+        return formatTime(m_database.duration(id), tr("hh:mm:ss"));
     default:
         return {};
     }
@@ -156,22 +165,26 @@ QVariant Model::data(const QModelIndex& index, int role) const
 
 void Model::filter(const QString& channel, const QString& topic, const QString& title)
 {
-    if (m_channel == channel && m_topic == topic && m_title == title)
+    const auto channel_ = channel.toStdString();
+    const auto topic_ = topic.toStdString();
+    const auto title_ = title.toStdString();
+
+    if (m_channel == channel_ && m_topic == topic_ && m_title == title_)
     {
         return;
     }
 
     beginResetModel();
 
-    if (m_channel != channel)
+    if (m_channel != channel_)
     {
-        m_channel = channel;
+        m_channel = channel_;
 
         fetchTopics();
     }
 
-    m_topic = topic;
-    m_title = title;
+    m_topic = topic_;
+    m_title = title_;
 
     query();
 
@@ -207,7 +220,7 @@ bool Model::canFetchMore(const QModelIndex& parent) const
         return false;
     }
 
-    return m_id.size() > m_fetched;
+    return static_cast< int >(m_id.size()) > m_fetched;
 }
 
 void Model::fetchMore(const QModelIndex& parent)
@@ -217,7 +230,7 @@ void Model::fetchMore(const QModelIndex& parent)
         return;
     }
 
-    const auto fetch = qMin(fetchSize, m_id.size() - m_fetched);
+    const auto fetch = std::min(fetchSize, static_cast< int >(m_id.size()) - m_fetched);
 
     beginInsertRows({}, m_fetched, m_fetched + fetch - 1);
 
@@ -243,7 +256,7 @@ QString Model::title(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::title));
+    return QString::fromStdString(m_database.title(index.internalId()));
 }
 
 QString Model::description(const QModelIndex& index) const
@@ -253,7 +266,7 @@ QString Model::description(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::description));
+    return QString::fromStdString(m_database.description(index.internalId()));
 }
 
 QString Model::website(const QModelIndex& index) const
@@ -263,7 +276,7 @@ QString Model::website(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::website));
+    return QString::fromStdString(m_database.website(index.internalId()));
 }
 
 QString Model::url(const QModelIndex& index) const
@@ -273,7 +286,7 @@ QString Model::url(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::url));
+    return QString::fromStdString(m_database.url(index.internalId()));
 }
 
 QString Model::urlSmall(const QModelIndex& index) const
@@ -283,7 +296,7 @@ QString Model::urlSmall(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::urlSmall));
+    return QString::fromStdString(m_database.urlSmall(index.internalId()));
 }
 
 QString Model::urlLarge(const QModelIndex& index) const
@@ -293,7 +306,7 @@ QString Model::urlLarge(const QModelIndex& index) const
         return {};
     }
 
-    return fetchShow(index.internalId(), std::mem_fn(&Show::urlLarge));
+    return QString::fromStdString(m_database.urlLarge(index.internalId()));
 }
 
 void Model::update()
@@ -334,33 +347,34 @@ void Model::query()
         break;
     }
 
-    m_id = m_database.query(
-               m_channel, m_topic, m_title,
-               sortColumn, m_sortOrder);
-    m_fetched = 0;
-}
+    Database::SortOrder sortOrder;
 
-template< typename Member >
-Model::ResultOf< Member > Model::fetchShow(const quintptr id, Member member) const
-{
-    if (const auto show = m_cache.object(id))
+    switch (m_sortOrder)
     {
-        return member(*show);
+    default:
+    case Qt::AscendingOrder:
+        sortOrder = Database::SortAscending;
+        break;
+    case Qt::DescendingOrder:
+        sortOrder = Database::SortDescending;
+        break;
     }
 
-    auto show = m_database.show(id);
-
-    const auto value = member(*show);
-
-    m_cache.insert(id, show.release());
-
-    return value;
+    m_id = m_database.query(
+               m_channel, m_topic, m_title,
+               sortColumn, sortOrder);
+    m_fetched = 0;
 }
 
 void Model::fetchChannels()
 {
-    auto channels = m_database.channels();
-    channels.prepend(QString());
+    QStringList channels;
+    channels.append(QString());
+
+    for (const auto& channel : m_database.channels())
+    {
+        channels.append(QString::fromStdString(channel));
+    }
 
     if (m_channels->stringList() != channels)
     {
@@ -370,8 +384,13 @@ void Model::fetchChannels()
 
 void Model::fetchTopics()
 {
-    auto topics = m_database.topics(m_channel);
-    topics.prepend(QString());
+    QStringList topics;
+    topics.append(QString());
+
+    for (const auto& topic : m_database.topics(m_channel))
+    {
+        topics.append(QString::fromStdString(topic));
+    }
 
     if (m_topics->stringList() != topics)
     {

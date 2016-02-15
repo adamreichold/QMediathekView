@@ -24,10 +24,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 
+#include <boost/date_time/gregorian/gregorian_types.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
 #include <QFutureWatcher>
 #include <QObject>
-
-#include "schema.h"
 
 namespace QMediathekView
 {
@@ -79,9 +80,23 @@ public:
         const SortColumn sortColumn, const SortOrder sortOrder) const;
 
 public:
-    std::shared_ptr< const Show > show(const quintptr id) const;
+    const std::string& channel(const quintptr id) const;
+    const std::string& topic(const quintptr id) const;
+    const std::string& title(const quintptr id) const;
 
-    std::vector< std::string > channels() const;
+    const boost::gregorian::date& date(const quintptr id) const;
+    const boost::posix_time::time_duration& time(const quintptr id) const;
+
+    const boost::posix_time::time_duration& duration(const quintptr id) const;
+
+    const std::string& description(const quintptr id) const;
+    const std::string& website(const quintptr id) const;
+
+    const std::string& url(const quintptr id) const;
+    const std::string& urlSmall(const quintptr id) const;
+    const std::string& urlLarge(const quintptr id) const;
+
+    const std::vector< std::string>& channels() const;
     std::vector< std::string > topics(std::string channel) const;
 
 private:
@@ -89,7 +104,7 @@ private:
 
     struct Data;
     using DataPtr = std::shared_ptr< Data >;
-    mutable DataPtr m_data;
+    DataPtr m_data;
 
     class Transaction;
 
