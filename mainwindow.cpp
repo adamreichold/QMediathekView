@@ -204,6 +204,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     restoreGeometry(m_settings.mainWindowGeometry());
     restoreState(m_settings.mainWindowState());
 
+    setWindowTitle(qApp->applicationName() + QStringLiteral("[*]"));
     statusBar()->showMessage(tr("Ready"), messageTimeout);
 }
 
@@ -230,16 +231,19 @@ void MainWindow::showMirrorsUpdateFailure(const QString& error)
 
 void MainWindow::showStartedDatabaseUpdate()
 {
+    setWindowModified(true);
     statusBar()->showMessage(tr("Started database update..."), messageTimeout);
 }
 
 void MainWindow::showCompletedDatabaseUpdate()
 {
+    setWindowModified(false);
     statusBar()->showMessage(tr("Successfully updated database."), messageTimeout);
 }
 
 void MainWindow::showDatabaseUpdateFailure(const QString& error)
 {
+    setWindowModified(false);
     statusBar()->showMessage(tr("Failed to updated database: %1").arg(error), errorMessageTimeout);
 }
 
