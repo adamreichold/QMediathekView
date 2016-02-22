@@ -23,10 +23,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QSettings>
 
-namespace
+namespace QMediathekView
 {
 
-using namespace QMediathekView;
+namespace
+{
 
 namespace Keys
 {
@@ -81,9 +82,6 @@ constexpr auto preferredUrl = Url::Default;
 } // Defaults
 
 } // anonymous
-
-namespace QMediathekView
-{
 
 Settings::Settings(QObject* parent) : QObject(parent),
     m_settings(new QSettings(this))

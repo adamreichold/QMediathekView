@@ -42,10 +42,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "mainwindow.h"
 #include "downloaddialog.h"
 
-namespace
+namespace QMediathekView
 {
 
-using namespace QMediathekView;
+namespace
+{
 
 const auto projectName = QStringLiteral("QMediathekView");
 
@@ -105,9 +106,6 @@ private:
 };
 
 } // anonymous
-
-namespace QMediathekView
-{
 
 Application::Application(int& argc, char** argv)
     : QApplication(argc, argv)
@@ -433,8 +431,8 @@ void Application::downloadDatabase(const QString& url, const Consumer& consumer)
 
 int main(int argc, char** argv)
 {
-    QApplication::setOrganizationName(projectName);
-    QApplication::setApplicationName(projectName);
+    QApplication::setOrganizationName(QMediathekView::projectName);
+    QApplication::setApplicationName(QMediathekView::projectName);
 
     return QMediathekView::Application(argc, argv).exec();
 }

@@ -32,10 +32,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "settings.h"
 #include "parser.h"
 
-namespace
+namespace QMediathekView
 {
 
-using namespace QMediathekView;
+namespace
+{
 
 const auto databaseType = QStringLiteral("QSQLITE");
 const auto databaseName = QStringLiteral("database");
@@ -288,9 +289,6 @@ private:
 };
 
 } // anonymous
-
-namespace QMediathekView
-{
 
 Database::Database(Settings& settings, QObject* parent)
     : QObject(parent)

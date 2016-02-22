@@ -41,10 +41,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "settingsdialog.h"
 #include "application.h"
 
-namespace
+namespace QMediathekView
 {
 
-using namespace QMediathekView;
+namespace
+{
 
 constexpr auto messageTimeout = 2 * 1000;
 constexpr auto errorMessageTimeout = 10 * 1000;
@@ -66,9 +67,6 @@ void forEachSelectedRow(const QAbstractItemView* view, Action action)
 }
 
 } // anonymous
-
-namespace QMediathekView
-{
 
 MainWindow::MainWindow(Settings& settings, Model& model, Application& application, QWidget* parent)
     : QMainWindow(parent)

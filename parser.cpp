@@ -23,10 +23,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <boost/spirit/include/qi.hpp>
 
-namespace
+namespace QMediathekView
 {
 
-using namespace QMediathekView;
+namespace
+{
 
 // *INDENT-OFF*
 
@@ -288,9 +289,6 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 // *INDENT-ON*
 
 } // anonymous
-
-namespace QMediathekView
-{
 
 bool parse(const QByteArray& data, Processor& processor)
 {
