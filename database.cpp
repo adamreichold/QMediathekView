@@ -26,9 +26,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/container/flat_set.hpp>
 #include <boost/date_time/gregorian/formatters.hpp>
 #include <boost/date_time/gregorian/greg_serialize.hpp>
 #include <boost/date_time/posix_time/time_serialize.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -84,6 +86,68 @@ public:
         }
     }
 
+    void collect(const std::string& key, std::vector< quintptr >& id) const
+    {
+        assert(!key.empty());
+        assert(to_lower_copy(key) == key);
+
+        if (m_lower.size() < 4096)
+        {
+            boost::dynamic_bitset<> ranks(m_lower.size());
+
+            for (std::size_t index = 0, count = m_lower.size(); index < count; ++index)
+            {
+                if (m_lower[index].find(key) != std::string::npos)
+                {
+                    ranks.set(index);
+                }
+            }
+
+            for (std::size_t index = 0, count = m_rank.size(); index < count; ++index)
+            {
+                if (ranks.test(m_rank[index]))
+                {
+                    id.push_back(index);
+                }
+            }
+        }
+        else
+        {
+            boost::container::flat_set< std::uint32_t > ranks;
+
+            for (std::size_t index = 0, count = m_lower.size(); index < count; ++index)
+            {
+                if (m_lower[index].find(key) != std::string::npos)
+                {
+                    ranks.insert(index);
+                }
+            }
+
+            for (std::size_t index = 0, count = m_rank.size(); index < count; ++index)
+            {
+                if (ranks.find(m_rank[index]) != ranks.end())
+                {
+                    id.push_back(index);
+                }
+            }
+        }
+    }
+
+    void filter(const std::string& key, std::vector< quintptr >& id) const
+    {
+        assert(to_lower_copy(key) == key);
+
+        if (key.empty())
+        {
+            return;
+        }
+
+        id.erase(std::remove_if(id.begin(), id.end(), [&](const quintptr index)
+        {
+            return m_lower[m_rank[index]].find(key) == std::string::npos;
+        }), id.end());
+    }
+
     std::size_t size() const
     {
         return m_rank.size();
@@ -102,6 +166,30 @@ public:
     const std::vector< std::string >& values() const
     {
         return m_values;
+    }
+
+    std::vector< std::string > values(const std::string& key) const
+    {
+        assert(to_lower_copy(key) == key);
+
+        std::vector< std::string > values;
+
+        if (key.empty())
+        {
+            values = m_values;
+        }
+        else
+        {
+            for (std::size_t index = 0, count = m_lower.size(); index < count; ++index)
+            {
+                if (m_lower[index].find(key) != std::string::npos)
+                {
+                    values.push_back(m_values[index]);
+                }
+            }
+        }
+
+        return values;
     }
 
     const std::string& lower(const std::size_t& index) const
@@ -126,36 +214,6 @@ private:
     std::vector< std::uint32_t > m_rank;
 
 };
-
-void collect(
-    const TextColumn& column, const std::string& key,
-    std::vector< quintptr >& id)
-{
-    for (std::size_t index = 0, count = column.size(); index < count; ++index)
-    {
-        const auto& value = column.lower(index);
-
-        if (value.find(key) != std::string::npos)
-        {
-            id.push_back(index);
-        }
-    }
-}
-
-void filter(
-    const TextColumn& column, const std::string& key,
-    std::vector< quintptr >& id)
-{
-    if (key.empty())
-    {
-        return;
-    }
-
-    id.erase(std::remove_if(id.begin(), id.end(), [&](const quintptr index)
-    {
-        return column.lower(index).find(key) == std::string::npos;
-    }), id.end());
-}
 
 template< typename Type >
 void sort(
@@ -495,21 +553,21 @@ std::vector< quintptr > Database::query(
 
     if (!channel.empty())
     {
-        collect(m_data->channel, channel, id);
-        filter(m_data->topic, topic, id);
-        filter(m_data->title, title, id);
+        m_data->channel.collect(channel, id);
+        m_data->topic.filter(topic, id);
+        m_data->title.filter(title, id);
     }
     else if (!topic.empty())
     {
-        collect(m_data->topic, topic, id);
-        filter(m_data->channel, channel, id);
-        filter(m_data->title, title, id);
+        m_data->topic.collect(topic, id);
+        m_data->channel.filter(channel, id);
+        m_data->title.filter(title, id);
     }
     else if (!title.empty())
     {
-        collect(m_data->title, title, id);
-        filter(m_data->channel, channel, id);
-        filter(m_data->topic, topic, id);
+        m_data->title.collect(title, id);
+        m_data->channel.filter(channel, id);
+        m_data->topic.filter(topic, id);
     }
     else
     {
@@ -609,35 +667,9 @@ const std::vector< std::string >& Database::channels() const
     return m_data->channel.values();
 }
 
-std::vector< std::string > Database::topics(std::string channel) const
+std::vector< std::string > Database::topics(const std::string& channel) const
 {
-    std::vector< std::string > topics;
-
-    to_lower(channel);
-
-    if (channel.empty())
-    {
-        topics = m_data->topic.values();
-    }
-    else
-    {
-        for (std::size_t index = 0, count = m_data->channel.size(); index < count; ++index)
-        {
-            if (m_data->channel.lower(index).find(channel) == std::string::npos)
-            {
-                continue;
-            }
-
-            const auto& topic = m_data->topic[index];
-            const auto pos = std::lower_bound(topics.begin(), topics.end(), topic);
-            if (pos == topics.end() || *pos != topic)
-            {
-                topics.insert(pos, topic);
-            }
-        }
-    }
-
-    return topics;
+    return m_data->topic.values(to_lower_copy(channel));
 }
 
 } // QMediathekView

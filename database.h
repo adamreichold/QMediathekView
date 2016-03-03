@@ -97,7 +97,7 @@ public:
     const std::string& urlLarge(const quintptr id) const;
 
     const std::vector< std::string>& channels() const;
-    std::vector< std::string > topics(std::string channel) const;
+    std::vector< std::string > topics(const std::string& channel) const;
 
 private:
     Settings& m_settings;
