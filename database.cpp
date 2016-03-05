@@ -379,6 +379,8 @@ void Database::update(const QByteArray& data)
                 return;
             }
 
+            Query(m_database).exec(QStringLiteral("ANALYZE"));
+
             processor.commit();
 
             m_settings.setDatabaseUpdatedOn();
