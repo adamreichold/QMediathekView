@@ -65,25 +65,38 @@ class TextColumn
 public:
     void insert(const std::string& value)
     {
-        const auto pos = std::lower_bound(m_values.begin(), m_values.end(), value);
-        const auto rank = std::distance(m_values.begin(), pos);
-        if (pos != m_values.end() && *pos == value)
+        m_buffer->push_back(value);
+    }
+
+    void rank()
+    {
+        const auto& buffer = *m_buffer;
+        const auto size = buffer.size();
+
+        std::vector< std::size_t > indices(size);
+        std::iota(indices.begin(), indices.end(), std::size_t(0));
+
+        std::sort(indices.begin(), indices.end(), [&](const std::size_t lhs, const std::size_t rhs)
         {
-            m_rank.push_back(rank);
-        }
-        else
+            return buffer[lhs] < buffer[rhs];
+        });
+
+        m_rank.resize(size);
+
+        for (const auto& index : indices)
         {
-            m_values.insert(pos, value);
-            m_lower.insert(m_lower.begin() + rank, to_lower_copy(value));
-            for (auto& oldRank : m_rank)
+            const auto& value = buffer[index];
+
+            if (m_values.empty() || m_values.back() != value)
             {
-                if (oldRank >= rank)
-                {
-                    ++oldRank;
-                }
+                m_lower.push_back(to_lower_copy(value));
+                m_values.push_back(std::move(value));
             }
-            m_rank.push_back(rank);
+
+            m_rank[index] = m_values.size() - 1u;
         }
+
+        m_buffer.reset();
     }
 
     void collect(const std::string& key, std::vector< quintptr >& id) const
@@ -202,6 +215,25 @@ public:
         return m_rank[index];
     }
 
+    const std::string& buffer(const std::size_t& index) const
+    {
+        return (*m_buffer)[index];
+    }
+
+    TextColumn(const TextColumn& column)
+    {
+        for (const auto& rank : column.m_rank)
+        {
+            m_buffer->push_back(column.m_values[rank]);
+        }
+    }
+
+    TextColumn() = default;
+    TextColumn(TextColumn&&) = default;
+
+    TextColumn& operator= (const TextColumn&) = delete;
+    TextColumn& operator= (TextColumn&&) = default;
+
     template< typename Archive >
     void serialize(Archive& archive, const unsigned int /* version */)
     {
@@ -212,6 +244,8 @@ private:
     std::vector< std::string > m_values;
     std::vector< std::string > m_lower;
     std::vector< std::uint32_t > m_rank;
+
+    std::unique_ptr< std::vector< std::string > > m_buffer{new std::vector< std::string >};
 
 };
 
@@ -311,13 +345,20 @@ struct Database::Data
         urlLarge.push_back(std::make_pair(show.urlLargeOffset, show.urlLargeSuffix));
     }
 
+    void rank()
+    {
+        channel.rank();
+        topic.rank();
+        title.rank();
+    }
+
     void update(const Show& show)
     {
-        const auto key = std::tie(show.title, show.url, show.channel, show.topic);
+        const auto key = std::tie(show.channel, show.topic, show.title, show.url);
 
         for (std::size_t index = 0, count = channel.size(); index < count; ++index)
         {
-            if (key == std::tie(title[index], url[index], channel[index], topic[index]))
+            if (key == std::tie(channel.buffer(index), topic.buffer(index), title.buffer(index), url[index]))
             {
                 date[index] = show.date;
                 time[index] = show.time;
@@ -337,7 +378,7 @@ struct Database::Data
         insert(show);
     }
 
-    Data (const Data& data)
+    Data(const Data& data)
         : channel(data.channel)
         , topic(data.topic)
         , title(data.title)
@@ -422,6 +463,11 @@ public:
 
             return false;
         }
+    }
+
+    void rank()
+    {
+        m_data->rank();
     }
 
     DataPtr&& take()
@@ -513,6 +559,8 @@ void Database::update(const QByteArray& data)
         {
             return DataPtr();
         }
+
+        transaction.rank();
 
         if (!transaction.save(databasePath().constData()))
         {
