@@ -70,8 +70,8 @@ private:
     const QUrl m_url;
 
     QNetworkAccessManager* m_networkManager;
-    QNetworkReply* m_networkReply;
-    QFile* m_file;
+    QScopedPointer< QNetworkReply > m_networkReply;
+    QScopedPointer< QFile > m_file;
 
     QLineEdit* m_filePathEdit;
 

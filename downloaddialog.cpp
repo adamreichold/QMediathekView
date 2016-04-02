@@ -49,8 +49,6 @@ DownloadDialog::DownloadDialog(
     , m_title(title)
     , m_url(url)
     , m_networkManager(networkManager)
-    , m_networkReply(nullptr)
-    , m_file(nullptr)
 {
     setWindowTitle(tr("Download '%1'").arg(m_title));
 
@@ -98,9 +96,6 @@ DownloadDialog::~DownloadDialog()
     if (m_networkReply)
     {
         m_networkReply->abort();
-
-        delete m_networkReply;
-        m_networkReply = nullptr;
     }
 }
 
@@ -118,13 +113,13 @@ void DownloadDialog::selectFilePath()
 
 void DownloadDialog::start()
 {
-    m_file = new QFile(m_filePathEdit->text());
+    m_file.reset(new QFile(m_filePathEdit->text()));
+
     if (!m_file->open(QIODevice::WriteOnly))
     {
-        delete m_file;
-        m_file = nullptr;
+        m_file.reset();
 
-        QMessageBox::critical(this, tr("Critical"), tr("Failed to open file for writing."));
+        QMessageBox::critical(this, tr("Critical"), tr("Failed to open file."));
 
         return;
     }
@@ -132,12 +127,12 @@ void DownloadDialog::start()
     QNetworkRequest request(m_url);
     request.setHeader(QNetworkRequest::UserAgentHeader, m_settings.userAgent());
 
-    m_networkReply = m_networkManager->get(request);
+    m_networkReply.reset(m_networkManager->get(request));
 
-    connect(m_networkReply, &QNetworkReply::readyRead, this, &DownloadDialog::readyRead);
-    connect(m_networkReply, &QNetworkReply::finished, this, &DownloadDialog::finished);
+    connect(m_networkReply.data(), &QNetworkReply::readyRead, this, &DownloadDialog::readyRead);
+    connect(m_networkReply.data(), &QNetworkReply::finished, this, &DownloadDialog::finished);
 
-    connect(m_networkReply, &QNetworkReply::downloadProgress, this, &DownloadDialog::downloadProgress);
+    connect(m_networkReply.data(), &QNetworkReply::downloadProgress, this, &DownloadDialog::downloadProgress);
 
     m_startButton->setEnabled(false);
     m_cancelButton->setEnabled(true);
@@ -151,12 +146,15 @@ void DownloadDialog::cancel()
 
 void DownloadDialog::readyRead()
 {
-    if (m_networkReply->error())
+    if (m_networkReply->error() != QNetworkReply::NoError)
     {
         return;
     }
 
-    m_file->write(m_networkReply->readAll());
+    if (m_file->write(m_networkReply->readAll()) == -1)
+    {
+        m_networkReply->abort();
+    }
 }
 
 void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
@@ -167,35 +165,33 @@ void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 
 void DownloadDialog::finished()
 {
-    const auto reply = m_networkReply;
+    decltype (m_networkReply) networkReply;
+    m_networkReply.swap(networkReply);
 
-    m_networkReply->deleteLater();
-    m_networkReply = nullptr;
+    decltype (m_file) file;
+    m_file.swap(file);
 
-    if (reply->error())
+    auto ok = networkReply->error() == QNetworkReply::NoError;
+
+    ok = ok && file->write(networkReply->readAll()) != -1;
+    ok = ok && file->flush();
+
+    file->close();
+
+    if (ok)
     {
-        m_file->close();
-        m_file->remove();
-
-        delete m_file;
-        m_file = nullptr;
+        m_startButton->setEnabled(false);
+        m_cancelButton->setEnabled(false);
+        m_filePathEdit->setEnabled(false);
+    }
+    else
+    {
+        file->remove();
 
         m_startButton->setEnabled(true);
         m_cancelButton->setEnabled(false);
         m_filePathEdit->setEnabled(true);
-
-        return;
     }
-
-    m_file->write(reply->readAll());
-    m_file->close();
-
-    delete m_file;
-    m_file = nullptr;
-
-    m_startButton->setEnabled(false);
-    m_cancelButton->setEnabled(false);
-    m_filePathEdit->setEnabled(false);
 }
 
 } // QMediathekView
