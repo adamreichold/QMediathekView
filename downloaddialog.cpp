@@ -126,6 +126,7 @@ void DownloadDialog::start()
 
     QNetworkRequest request(m_url);
     request.setHeader(QNetworkRequest::UserAgentHeader, m_settings.userAgent());
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
 
     m_networkReply.reset(m_networkManager->get(request));
 
@@ -160,7 +161,7 @@ void DownloadDialog::readyRead()
 void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
     m_progressBar->setValue(bytesReceived);
-    m_progressBar->setMaximum(bytesTotal);
+    m_progressBar->setMaximum(qMax(qint64(0), bytesTotal));
 }
 
 void DownloadDialog::finished()
