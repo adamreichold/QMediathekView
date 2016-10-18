@@ -82,6 +82,9 @@ private:
 
     mutable QSqlDatabase m_database;
 
+    struct PreparedQueries;
+    QScopedPointer< PreparedQueries > m_preparedQueries;
+
     QFuture< void > m_update;
 
 };

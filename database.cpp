@@ -186,6 +186,12 @@ DEFINE_QUERY(selectShow,
              " urlLargeOffset, urlLargeSuffix"
              " FROM shows WHERE id = ?");
 
+DEFINE_QUERY(selectChannels, "SELECT DISTINCT(channel) FROM shows");
+
+DEFINE_QUERY(selectTopics, "SELECT DISTINCT(topic) FROM shows");
+
+DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM shows WHERE channel LIKE ('%' || ? || '%')");
+
 #undef DEFINE_QUERY
 
 }
@@ -290,6 +296,28 @@ private:
 
 } // anonymous
 
+struct Database::PreparedQueries
+{
+    PreparedQueries(QSqlDatabase& database)
+        : selectShow(database)
+        , selectChannels(database)
+        , selectTopics(database)
+        , selectTopicsByChannel(database)
+    {
+        selectShow.prepare(Queries::selectShow);
+
+        selectChannels.prepare(Queries::selectChannels);
+        selectTopics.prepare(Queries::selectTopics);
+        selectTopicsByChannel.prepare(Queries::selectTopicsByChannel);
+    }
+
+    Query selectShow;
+
+    Query selectChannels;
+    Query selectTopics;
+    Query selectTopicsByChannel;
+};
+
 Database::Database(Settings& settings, QObject* parent)
     : QObject(parent)
     , m_settings(settings)
@@ -335,6 +363,7 @@ Database::Database(Settings& settings, QObject* parent)
 
         query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
 
+        m_preparedQueries.reset(new PreparedQueries(m_database));
     }
     catch (QSqlError& error)
     {
@@ -479,11 +508,7 @@ std::unique_ptr< Show > Database::show(const quintptr id) const
 
     try
     {
-        Query query(m_database);
-
-        query.prepare(Queries::selectShow);
-
-        query << id;
+        Query& query = m_preparedQueries->selectShow << id;
 
         query.exec();
 
@@ -524,9 +549,9 @@ QStringList Database::channels() const
 
     try
     {
-        Query query(m_database);
+        Query& query = m_preparedQueries->selectChannels;
 
-        query.exec(QStringLiteral("SELECT DISTINCT(channel) FROM shows"));
+        query.exec();
 
         while (query.nextRecord())
         {
@@ -545,16 +570,11 @@ QStringList Database::topics(const QString& channel) const
 {
     QStringList topics;
 
-    const auto filterClause = channel.isEmpty() ? QStringLiteral("ifnull(1, ?)")
-                              : QStringLiteral("channel LIKE ('%' || ? || '%')");
-
     try
     {
-        Query query(m_database);
-
-        query.prepare(QStringLiteral("SELECT DISTINCT(topic) FROM shows WHERE %1").arg(filterClause));
-
-        query << channel;
+        Query& query = channel.isEmpty()
+                       ? m_preparedQueries->selectTopics
+                       : m_preparedQueries->selectTopicsByChannel << channel;
 
         query.exec();
 
