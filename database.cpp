@@ -341,9 +341,9 @@ Database::Database(Settings& settings, QObject* parent)
                        "CREATE TABLE IF NOT EXISTS shows ("
                        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                        " key BLOB,"
-                       " channel TEXT NOCASE,"
-                       " topic TEXT NOCASE,"
-                       " title TEXT NOCASE,"
+                       " channel TEXT,"
+                       " topic TEXT,"
+                       " title TEXT,"
                        " date INTEGER,"
                        " time INTEGER,"
                        " duration INTEGER,"
@@ -357,11 +357,11 @@ Database::Database(Settings& settings, QObject* parent)
 
         query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
 
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByChannel ON shows (channel)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTopic ON shows (topic)"));
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByTitle ON shows (title)"));
-
-        query.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS showsByDateAndTime ON shows (date DESC, time DESC)"));
+        query.exec(QStringLiteral("CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
+                                  " channel,"
+                                  " topic,"
+                                  " title,"
+                                  " content=shows)"));
 
         m_preparedQueries.reset(new PreparedQueries(m_database));
     }
@@ -408,9 +408,9 @@ void Database::update(const QByteArray& data)
                 return;
             }
 
-            Query(m_database).exec(QStringLiteral("ANALYZE"));
-
             processor.commit();
+
+            Query(m_database).exec(QStringLiteral("INSERT INTO showsByText(showsByText) VALUES('rebuild')"));
 
             m_settings.setDatabaseUpdatedOn();
 
@@ -435,6 +435,7 @@ QVector< quintptr > Database::query(
     {
     default:
     case Qt::AscendingOrder:
+        sortOrderClause = QStringLiteral("ASC");
         break;
     case Qt::DescendingOrder:
         sortOrderClause = QStringLiteral("DESC");
@@ -447,45 +448,69 @@ QVector< quintptr > Database::query(
     {
     default:
     case SortChannel:
-        sortClause = QStringLiteral("channel %1, date DESC, time DESC").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.channel %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
         break;
     case SortTopic:
-        sortClause = QStringLiteral("topic %1, date DESC, time DESC").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.topic %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
         break;
     case SortTitle:
-        sortClause = QStringLiteral("title %1, date DESC, time DESC").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.title %1, shows.date DESC, shows.time DESC").arg(sortOrderClause);
         break;
     case SortDate:
-        sortClause = QStringLiteral("date %1").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.date %1").arg(sortOrderClause);
         break;
     case SortTime:
-        sortClause = QStringLiteral("time %1").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.time %1").arg(sortOrderClause);
         break;
     case SortDuration:
-        sortClause = QStringLiteral("duration %1").arg(sortOrderClause);
+        sortClause = QStringLiteral("shows.duration %1").arg(sortOrderClause);
         break;
     }
 
-    const auto channelFilterClause = channel.isEmpty() ? QStringLiteral("ifnull(1, ?)")
-                                     : QStringLiteral("channel LIKE ('%' || ? || '%')");
+    const auto channelFilterClause = channel.isEmpty() ? QStringLiteral("1")
+                                     : QStringLiteral("showsByText MATCH 'channel : \"' || ? || '\"'");
 
-    const auto topicFilterClause = topic.isEmpty() ? QStringLiteral("ifnull(1, ?)")
-                                   : QStringLiteral("topic LIKE ('%' || ? || '%')");
+    const auto topicFilterClause = topic.isEmpty() ? QStringLiteral("1")
+                                   : QStringLiteral("showsByText MATCH 'topic : \"' || ? || '\"'");
 
-    const auto titleFilterCaluse = title.isEmpty() ? QStringLiteral("ifnull(1, ?)")
-                                   : QStringLiteral("title LIKE ('%' || ? || '%')");
+    const auto titleFilterCaluse = title.isEmpty() ? QStringLiteral("1")
+                                   : QStringLiteral("showsByText MATCH 'title : \"' || ? || '\"'");
 
     try
     {
         Query query(m_database);
 
-        query.prepare(QStringLiteral("SELECT id FROM shows WHERE %1 AND %2 AND %3 ORDER BY %4")
-                      .arg(channelFilterClause)
-                      .arg(topicFilterClause)
-                      .arg(titleFilterCaluse)
-                      .arg(sortClause));
+        if(channel.isEmpty() && topic.isEmpty() && title.isEmpty())
+        {
+            query.prepare(QStringLiteral("SELECT id FROM shows ORDER BY %1").arg(sortClause));
+        }
+        else
+        {
+            query.prepare(QStringLiteral("SELECT id"
+                                         " FROM showsByText"
+                                         " JOIN shows"
+                                         " ON showsByText.rowid = shows.id"
+                                         " WHERE %1 AND %2 AND %3 ORDER BY %4")
+                          .arg(channelFilterClause)
+                          .arg(topicFilterClause)
+                          .arg(titleFilterCaluse)
+                          .arg(sortClause));
 
-        query << channel << topic << title;
+            if(!channel.isEmpty())
+            {
+                query << channel;
+            }
+
+            if(!topic.isEmpty())
+            {
+                query << topic;
+            }
+
+            if(!title.isEmpty())
+            {
+                query << title;
+            }
+        }
 
         query.exec();
 
