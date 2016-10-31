@@ -212,21 +212,6 @@ MainWindow::~MainWindow()
     m_settings.setMainWindowState(saveState());
 }
 
-void MainWindow::showStartedMirrorsUpdate()
-{
-    statusBar()->showMessage(tr("Started mirror list update..."), messageTimeout);
-}
-
-void MainWindow::showCompletedMirrorsUpdate()
-{
-    statusBar()->showMessage(tr("Successfully updated mirror list."), messageTimeout);
-}
-
-void MainWindow::showMirrorsUpdateFailure(const QString& error)
-{
-    statusBar()->showMessage(tr("Failed to updated mirror list: %1").arg(error), errorMessageTimeout);
-}
-
 void MainWindow::showStartedDatabaseUpdate()
 {
     setWindowModified(true);
@@ -243,6 +228,16 @@ void MainWindow::showDatabaseUpdateFailure(const QString& error)
 {
     setWindowModified(false);
     statusBar()->showMessage(tr("Failed to updated database: %1").arg(error), errorMessageTimeout);
+}
+
+void MainWindow::showDatabaseDownloadStarted()
+{
+    statusBar()->showMessage(tr("Started to download database..."));
+}
+
+void MainWindow::showDatabaseImportStarted()
+{
+    statusBar()->showMessage(tr("Started to import database..."));
 }
 
 void MainWindow::resetFilterPressed()

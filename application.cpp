@@ -21,11 +21,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "application.h"
 
-#include <memory>
-#include <random>
-
 #include <QDesktopServices>
-#include <QDomDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -39,6 +35,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "settings.h"
 #include "database.h"
 #include "model.h"
+#include "torrentsession.h"
 #include "mainwindow.h"
 #include "downloaddialog.h"
 
@@ -50,29 +47,13 @@ namespace
 
 const auto projectName = QStringLiteral("QMediathekView");
 
-namespace Tags
-{
-
-const auto root = QStringLiteral("Mediathek");
-const auto server = QStringLiteral("Server");
-const auto url = QStringLiteral("URL");
-
-} // Tags
-
-QString randomItem(const QStringList& list)
-{
-    std::random_device device;
-    std::default_random_engine generator(device());
-    std::uniform_int_distribution<> distribution(0, list.size() - 1);
-
-    return list.at(distribution(generator));
-}
-
 class Decompressor
 {
 public:
     Decompressor()
         : m_stream(LZMA_STREAM_INIT)
+        , m_buffer(64 * 1024, Qt::Uninitialized)
+        , m_data()
     {
         Q_UNUSED(lzma_stream_decoder(&m_stream, UINT64_MAX, LZMA_TELL_NO_CHECK));
     }
@@ -84,12 +65,12 @@ public:
 
         for (lzma_ret result = LZMA_OK; result == LZMA_OK;)
         {
-            m_stream.next_out = m_buffer;
-            m_stream.avail_out = sizeof(m_buffer);
+            m_stream.next_out = reinterpret_cast< std::uint8_t* >(m_buffer.data());
+            m_stream.avail_out = m_buffer.size();
 
             result = lzma_code(&m_stream, LZMA_RUN);
 
-            m_data.append(reinterpret_cast< const char* >(m_buffer), sizeof(m_buffer) - m_stream.avail_out);
+            m_data.append(m_buffer.constData(), m_buffer.size() - m_stream.avail_out);
         }
     }
 
@@ -100,7 +81,7 @@ public:
 
 private:
     lzma_stream m_stream;
-    std::uint8_t m_buffer[64 * 1024];
+    QByteArray m_buffer;
     QByteArray m_data;
 
 };
@@ -113,6 +94,7 @@ Application::Application(int& argc, char** argv)
     , m_database(new Database(*m_settings, this))
     , m_model(new Model(*m_database, this))
     , m_networkManager(new QNetworkAccessManager(this))
+    , m_torrentSession(new TorrentSession(this))
     , m_mainWindow(new MainWindow(*m_settings, *m_model, *this))
 {
     connect(m_database, &Database::updated, m_model, &Model::update);
@@ -120,13 +102,16 @@ Application::Application(int& argc, char** argv)
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
     connect(m_database, &Database::failedToUpdate, this, &Application::failedToUpdateDatabase);
 
-    connect(this, &Application::startedMirrorsUpdate, m_mainWindow, &MainWindow::showStartedMirrorsUpdate);
-    connect(this, &Application::completedMirrorsUpdate, m_mainWindow, &MainWindow::showCompletedMirrorsUpdate);
-    connect(this, &Application::failedToUpdateMirrors, m_mainWindow, &MainWindow::showMirrorsUpdateFailure);
+    connect(m_torrentSession, &TorrentSession::torrentAdded, this, &Application::databaseDownloadStarted);
+    connect(m_torrentSession, &TorrentSession::torrentFinished, this, &Application::torrentFinished);
+    connect(m_torrentSession, &TorrentSession::failedToAddTorrent, this, &Application::failedToUpdateDatabase);
 
     connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
     connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
     connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
+
+    connect(this, &Application::databaseDownloadStarted, m_mainWindow, &MainWindow::showDatabaseDownloadStarted);
+    connect(this, &Application::databaseImportStarted, m_mainWindow, &MainWindow::showDatabaseImportStarted);
 }
 
 Application::~Application()
@@ -135,7 +120,7 @@ Application::~Application()
 
 int Application::exec()
 {
-    QTimer::singleShot(0, this, &Application::checkUpdateMirrors);
+    QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
 
     m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
     m_mainWindow->show();
@@ -183,22 +168,6 @@ void Application::downloadLarge(const QModelIndex& index) const
     startDownload(m_model->title(index), m_model->urlLarge(index));
 }
 
-void Application::checkUpdateMirrors()
-{
-    const auto updateAfter = m_settings->mirrorsUpdateAfterDays();
-    const auto updatedOn = m_settings->mirrorsUpdatedOn();
-    const auto updatedBefore = updatedOn.daysTo(QDateTime::currentDateTime());
-
-    if (!updatedOn.isValid() || updateAfter < updatedBefore)
-    {
-        updateMirrors();
-    }
-    else
-    {
-        checkUpdateDatabase();
-    }
-}
-
 void Application::checkUpdateDatabase()
 {
     const auto updateAfter = m_settings->databaseUpdateAfterHours();
@@ -211,50 +180,71 @@ void Application::checkUpdateDatabase()
     }
 }
 
-void Application::updateMirrors()
-{
-    emit startedMirrorsUpdate();
-
-    downloadMirrors(m_settings->fullListUrl(), [this](const QStringList& mirrors)
-    {
-        m_settings->setFullListMirrors(mirrors);
-
-        downloadMirrors(m_settings->partialListUrl(), [this](const QStringList& mirrors)
-        {
-            m_settings->setPartialListMirrors(mirrors);
-            m_settings->setMirrorsUpdatedOn();
-
-            emit completedMirrorsUpdate();
-
-            QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
-        });
-    });
-}
-
 void Application::updateDatabase()
 {
     emit startedDatabaseUpdate();
 
-    const auto updatedOn = m_settings->databaseUpdatedOn();
-    const auto fullUpdateOn = QDateTime(QDate::currentDate(), QTime(9, 0));
+    QNetworkRequest request(m_settings->torrentUrl());
+    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
 
-    if (!updatedOn.isValid() || updatedOn < fullUpdateOn)
+    const auto reply = m_networkManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, [this, reply]()
     {
-        const auto url = randomItem(m_settings->fullListMirrors());
+        reply->deleteLater();
 
-        downloadDatabase(url, [this](const QByteArray& data)
+        if (reply->error())
         {
-            m_database->fullUpdate(data);
-        });
+            emit failedToUpdateDatabase(reply->errorString());
+            return;
+        }
+
+        try
+        {
+            m_torrentSession->addTorrent(reply->readAll(), QDir::tempPath());
+        }
+        catch (const std::exception& exception)
+        {
+            emit failedToUpdateDatabase(exception.what());
+        }
+    });
+}
+
+void Application::torrentFinished(const libtorrent::torrent_handle& handle)
+{
+    try
+    {
+        const auto filePath = QDir::temp().filePath(QString::fromStdString(handle.torrent_file()->file_at(0).path));
+
+        QFile file(filePath);
+
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            emit failedToUpdateDatabase(tr("Failed to open database at '%1'.").arg(filePath));
+            return;
+        }
+
+        Decompressor decompressor;
+
+        forever
+        {
+            const auto buffer = file.read(8 * 1024);
+
+            if (buffer.isEmpty())
+            {
+                break;
+            }
+
+            decompressor.appendData(buffer);
+        }
+
+        // TODO
+
+        emit databaseImportStarted();
     }
-    else
+    catch (const std::exception& exception)
     {
-        const auto url = randomItem(m_settings->partialListMirrors());
-
-        downloadDatabase(url, [this](const QByteArray& data)
-        {
-            m_database->partialUpdate(data);
-        });
+        emit failedToUpdateDatabase(exception.what());
     }
 }
 
@@ -333,98 +323,6 @@ void Application::startDownload(const QString& title, const QString& url) const
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
     }
-}
-
-template< typename Consumer >
-void Application::downloadMirrors(const QString& url, const Consumer& consumer)
-{
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::finished, [this, consumer, reply]()
-    {
-        reply->deleteLater();
-
-        if (reply->error())
-        {
-            emit failedToUpdateMirrors(reply->errorString());
-            return;
-        }
-
-        QStringList mirrors;
-
-        {
-            QDomDocument document;
-            document.setContent(reply);
-
-            const auto root = document.documentElement();
-            if (root.tagName() != Tags::root)
-            {
-                emit failedToUpdateMirrors(tr("Received a malformed mirror list."));
-                return;
-            }
-
-            auto server = root.firstChildElement(Tags::server);
-
-            while (!server.isNull())
-            {
-                const auto url = server.firstChildElement(Tags::url).text();
-
-                if (!url.isEmpty())
-                {
-                    mirrors.append(url);
-                }
-
-                server = server.nextSiblingElement(Tags::server);
-            }
-        }
-
-        if (mirrors.isEmpty())
-        {
-            emit failedToUpdateMirrors(tr("Received an empty mirror list."));
-            return;
-        }
-
-        consumer(mirrors);
-    });
-}
-
-template< typename Consumer >
-void Application::downloadDatabase(const QString& url, const Consumer& consumer)
-{
-    const auto decompressor = std::make_shared< Decompressor >();
-
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::readyRead, [this, reply, decompressor]()
-    {
-        if (reply->error())
-        {
-            return;
-        }
-
-        decompressor->appendData(reply->readAll());
-    });
-
-    connect(reply, &QNetworkReply::finished, [this, consumer, reply, decompressor]()
-    {
-        reply->deleteLater();
-
-        if (reply->error())
-        {
-            emit failedToUpdateDatabase(reply->errorString());
-            return;
-        }
-
-        decompressor->appendData(reply->readAll());
-
-        consumer(decompressor->data());
-    });
 }
 
 } // QMediathekView

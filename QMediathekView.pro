@@ -6,10 +6,10 @@ CONFIG(release, debug|release) {
     QMAKE_LFLAGS += -flto
 }
 
-QT += core concurrent xml sql network gui widgets
+QT += core concurrent sql network gui widgets
 
 CONFIG += link_pkgconfig
-PKGCONFIG += liblzma
+PKGCONFIG += libtorrent-rasterbar liblzma
 
 TARGET = QMediathekView
 TEMPLATE = app
@@ -23,6 +23,7 @@ SOURCES += \
     mainwindow.cpp \
     downloaddialog.cpp \
     settingsdialog.cpp \
+    torrentsession.cpp \
     application.cpp
 
 HEADERS += \
@@ -35,6 +36,7 @@ HEADERS += \
     mainwindow.h \
     downloaddialog.h \
     settingsdialog.h \
+    torrentsession.h \
     application.h
 
 target.path = /usr/bin

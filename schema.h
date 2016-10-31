@@ -23,6 +23,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #define SCHEMA_H
 
 #include <QDateTime>
+#include <QSharedPointer>
 
 namespace QMediathekView
 {
@@ -42,22 +43,8 @@ struct Show
     QString website;
 
     QString url;
-
-    unsigned short urlSmallOffset = 0;
-    QString urlSmallSuffix;
-
-    QString urlSmall() const
-    {
-        return url.left(urlSmallOffset).append(urlSmallSuffix);
-    }
-
-    unsigned short urlLargeOffset = 0;
-    QString urlLargeSuffix;
-
-    QString urlLarge() const
-    {
-        return url.left(urlLargeOffset).append(urlLargeSuffix);
-    }
+    QString urlSmall;
+    QString urlLarge;
 
 };
 

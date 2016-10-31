@@ -36,16 +36,9 @@ namespace Keys
 
 DEFINE_KEY(userAgent);
 
-DEFINE_KEY(fullListUrl);
-DEFINE_KEY(partialListUrl);
+DEFINE_KEY(torrentUrl);
 
-DEFINE_KEY(fullListMirrors);
-DEFINE_KEY(partialListMirrors);
-
-DEFINE_KEY(mirrorsUpdateAfterDays);
 DEFINE_KEY(databaseUpdateAfterHours);
-
-DEFINE_KEY(mirrorsUpdatedOn);
 DEFINE_KEY(databaseUpdatedOn);
 
 DEFINE_KEY(playCommand);
@@ -67,10 +60,8 @@ namespace Defaults
 
 const auto userAgent = QStringLiteral("QMediathekView");
 
-const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
-const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
+const auto torrentUrl = QStringLiteral("http://localhost:8000/mediathek.csv.xz.torrent");
 
-constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
 
 const auto playCommand = QStringLiteral("vlc %1");
@@ -97,44 +88,9 @@ QString Settings::userAgent() const
     return m_settings->value(Keys::userAgent, Defaults::userAgent).toString();
 }
 
-QString Settings::fullListUrl() const
+QString Settings::torrentUrl() const
 {
-    return m_settings->value(Keys::fullListUrl, Defaults::fullListUrl).toString();
-}
-
-QString Settings::partialListUrl() const
-{
-    return m_settings->value(Keys::partialListUrl, Defaults::partialListUrl).toString();
-}
-
-QStringList Settings::fullListMirrors() const
-{
-    return m_settings->value(Keys::fullListMirrors).toStringList();
-}
-
-void Settings::setFullListMirrors(const QStringList& mirrors)
-{
-    m_settings->setValue(Keys::fullListMirrors, mirrors);
-}
-
-QStringList Settings::partialListMirrors() const
-{
-    return m_settings->value(Keys::partialListMirrors).toStringList();
-}
-
-void Settings::setPartialListMirrors(const QStringList& mirrors)
-{
-    m_settings->setValue(Keys::partialListMirrors, mirrors);
-}
-
-int Settings::mirrorsUpdateAfterDays() const
-{
-    return m_settings->value(Keys::mirrorsUpdateAfterDays, Defaults::mirrorListUpdateAfterDays).toInt();
-}
-
-void Settings::setMirrorsUpdateAfterDays(int days)
-{
-    m_settings->setValue(Keys::mirrorsUpdateAfterDays, days);
+    return m_settings->value(Keys::torrentUrl, Defaults::torrentUrl).toString();
 }
 
 int Settings::databaseUpdateAfterHours() const
@@ -145,16 +101,6 @@ int Settings::databaseUpdateAfterHours() const
 void Settings::setDatabaseUpdateAfterHours(int hours)
 {
     m_settings->setValue(Keys::databaseUpdateAfterHours, hours);
-}
-
-QDateTime Settings::mirrorsUpdatedOn() const
-{
-    return m_settings->value(Keys::mirrorsUpdatedOn).toDateTime();
-}
-
-void Settings::setMirrorsUpdatedOn()
-{
-    m_settings->setValue(Keys::mirrorsUpdatedOn, QDateTime::currentDateTime());
 }
 
 QDateTime Settings::databaseUpdatedOn() const

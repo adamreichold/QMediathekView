@@ -49,13 +49,12 @@ public:
     ~MainWindow();
 
 public:
-    void showStartedMirrorsUpdate();
-    void showCompletedMirrorsUpdate();
-    void showMirrorsUpdateFailure(const QString& error);
-
     void showStartedDatabaseUpdate();
     void showCompletedDatabaseUpdate();
     void showDatabaseUpdateFailure(const QString& error);
+
+    void showDatabaseDownloadStarted();
+    void showDatabaseImportStarted();
 
 private:
     void resetFilterPressed();

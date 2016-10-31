@@ -162,7 +162,6 @@ namespace Queries
 DEFINE_QUERY(createShows,
              "CREATE TABLE IF NOT EXISTS shows ("
              " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-             " key BLOB,"
              " channel TEXT,"
              " topic TEXT,"
              " title TEXT,"
@@ -172,14 +171,17 @@ DEFINE_QUERY(createShows,
              " description TEXT,"
              " website TEXT,"
              " url TEXT,"
-             " urlSmallOffset INTEGER,"
-             " urlSmallSuffix TEXT,"
-             " urlLargeOffset INTEGER,"
-             " urlLargeSuffix TEXT)");
+             " urlSmall TEXT,"
+             " urlLarge TEXT)");
+
+DEFINE_QUERY(createShowsByText,
+             "CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
+             " channel,"
+             " topic,"
+             " title,"
+             " content=shows)");
 
 DEFINE_QUERY(truncateShows, "DELETE FROM shows");
-
-DEFINE_QUERY(createShowsByKey, "CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)");
 
 DEFINE_QUERY(createShowsByText,
              "CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
@@ -194,15 +196,14 @@ DEFINE_QUERY(deleteShow, "DELETE FROM shows WHERE key = ?");
 
 DEFINE_QUERY(insertShow,
              "INSERT OR IGNORE INTO shows ("
-             " key,"
              " channel, topic, title,"
              " date, time,"
              " duration,"
              " description, website,"
              " url,"
-             " urlSmallOffset, urlSmallSuffix,"
-             " urlLargeOffset, urlLargeSuffix)"
-             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+             " urlSmall,"
+             " urlLarge)"
+             " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
 DEFINE_QUERY(selectShow,
              "SELECT"
@@ -211,8 +212,8 @@ DEFINE_QUERY(selectShow,
              " duration,"
              " description, website,"
              " url,"
-             " urlSmallOffset, urlSmallSuffix,"
-             " urlLargeOffset, urlLargeSuffix"
+             " urlSmall,"
+             " urlLarge"
              " FROM shows WHERE id = ?");
 
 DEFINE_QUERY(selectChannels, "SELECT DISTINCT(channel) FROM showsByText");
@@ -225,37 +226,7 @@ DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM showsByText WHE
 
 }
 
-QByteArray keyOf(const Show& show)
-{
-    QCryptographicHash hash(QCryptographicHash::Md5);
-
-    const auto addText = [&hash](const QString& text)
-    {
-        hash.addData(reinterpret_cast< const char* >(text.constData()), text.size() * sizeof(QChar));
-    };
-
-    addText(show.channel);
-    addText(show.topic);
-    addText(show.title);
-
-    addText(show.url);
-
-    return hash.result();
-}
-
-void bindTo(Query& query, const QByteArray& key, const Show& show)
-{
-    query << key
-          << show.channel << show.topic << show.title
-          << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
-          << show.duration.msecsSinceStartOfDay()
-          << show.description << show.website
-          << show.url
-          << show.urlSmallOffset << show.urlSmallSuffix
-          << show.urlLargeOffset << show.urlLargeSuffix;
-}
-
-class FullUpdate : public Processor
+class UpdateProcessor : public Processor
 {
 public:
     FullUpdate(QSqlDatabase& database)
@@ -269,9 +240,11 @@ public:
 
     void operator()(const Show& show) override
     {
-        const auto key = keyOf(show);
-
-        bindTo(m_insertShow, key, show);
+        m_query << show.channel << show.topic << show.title
+                << show.date.toJulianDay() << show.time.msecsSinceStartOfDay()
+                << show.duration.msecsSinceStartOfDay()
+                << show.description << show.website
+                << show.url << show.urlSmall << show.urlLarge;
 
         m_insertShow.exec();
     }
@@ -368,7 +341,6 @@ Database::Database(Settings& settings, QObject* parent)
         Query query(m_database);
 
         query.exec(Queries::createShows);
-        query.exec(Queries::createShowsByKey);
         query.exec(Queries::createShowsByText);
 
         m_preparedQueries.reset(new PreparedQueries(m_database));
@@ -566,12 +538,8 @@ std::unique_ptr< Show > Database::show(const quintptr id) const
             show->website = query.nextValue< QString >();
 
             show->url = query.nextValue< QString >();
-
-            show->urlSmallOffset = query.nextValue< unsigned short >();
-            show->urlSmallSuffix = query.nextValue< QString >();
-
-            show->urlLargeOffset = query.nextValue< unsigned short >();
-            show->urlLargeSuffix = query.nextValue< QString >();
+            show->urlSmall = query.nextValue< QString >();
+            show->urlLarge = query.nextValue< QString >();
         }
     }
     catch (QSqlError& error)

@@ -26,12 +26,18 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 class QNetworkAccessManager;
 
+namespace libtorrent
+{
+class torrent_handle;
+}
+
 namespace QMediathekView
 {
 
 class Settings;
 class Database;
 class Model;
+class TorrentSession;
 class MainWindow;
 
 class Application : public QApplication
@@ -44,13 +50,12 @@ public:
     ~Application();
 
 signals:
-    void startedMirrorsUpdate();
-    void completedMirrorsUpdate();
-    void failedToUpdateMirrors(const QString& error);
-
     void startedDatabaseUpdate();
     void completedDatabaseUpdate();
     void failedToUpdateDatabase(const QString& error);
+
+    void databaseDownloadStarted();
+    void databaseImportStarted();
 
 public:
     int exec();
@@ -65,11 +70,11 @@ public:
     void downloadSmall(const QModelIndex& index) const;
     void downloadLarge(const QModelIndex& index) const;
 
-    void checkUpdateMirrors();
     void checkUpdateDatabase();
-
-    void updateMirrors();
     void updateDatabase();
+
+private:
+    void torrentFinished(const libtorrent::torrent_handle& handle);
 
 private:
     QString preferredUrl(const QModelIndex& index) const;
@@ -77,18 +82,13 @@ private:
     void startPlay(const QString& url) const;
     void startDownload(const QString& title, const QString& url) const;
 
-    template< typename Consumer >
-    void downloadMirrors(const QString& url, const Consumer& consumer);
-
-    template< typename Consumer >
-    void downloadDatabase(const QString& url, const Consumer& consumer);
-
 private:
     Settings* m_settings;
     Database* m_database;
     Model* m_model;
 
     QNetworkAccessManager* m_networkManager;
+    TorrentSession* m_torrentSession;
 
     MainWindow* m_mainWindow;
 
