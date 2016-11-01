@@ -467,14 +467,25 @@ QVector< quintptr > Database::query(
         break;
     }
 
-    const auto channelFilterClause = channel.isEmpty() ? QStringLiteral("1")
-                                     : QStringLiteral("showsByText MATCH 'channel : \"' || ? || '\"'");
+    QStringList filterClauses;
 
-    const auto topicFilterClause = topic.isEmpty() ? QStringLiteral("1")
-                                   : QStringLiteral("showsByText MATCH 'topic : \"' || ? || '\"'");
+    if(!channel.isEmpty())
+    {
+        filterClauses.append("channel : \"' || ? || '\"");
+    }
 
-    const auto titleFilterCaluse = title.isEmpty() ? QStringLiteral("1")
-                                   : QStringLiteral("showsByText MATCH 'title : \"' || ? || '\"'");
+    if(!topic.isEmpty())
+    {
+        filterClauses.append("topic : \"' || ? || '\"");
+    }
+
+    if(!title.isEmpty())
+    {
+        filterClauses.append("title : \"' || ? || '\"");
+    }
+
+    const auto filterClause = filterClauses.isEmpty() ? QStringLiteral("1")
+                              : QStringLiteral("showsByText MATCH '%1'").arg(filterClauses.join(QStringLiteral(" AND ")));
 
     try
     {
@@ -490,11 +501,8 @@ QVector< quintptr > Database::query(
                                          " FROM showsByText"
                                          " JOIN shows"
                                          " ON showsByText.rowid = shows.id"
-                                         " WHERE %1 AND %2 AND %3 ORDER BY %4")
-                          .arg(channelFilterClause)
-                          .arg(topicFilterClause)
-                          .arg(titleFilterCaluse)
-                          .arg(sortClause));
+                                         " WHERE %1 ORDER BY %4")
+                          .arg(filterClause).arg(sortClause));
 
             if(!channel.isEmpty())
             {
