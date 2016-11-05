@@ -159,7 +159,36 @@ namespace Queries
 
 #define DEFINE_QUERY(name, text) const auto name = QStringLiteral(text)
 
+DEFINE_QUERY(createShows,
+             "CREATE TABLE IF NOT EXISTS shows ("
+             " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+             " key BLOB,"
+             " channel TEXT,"
+             " topic TEXT,"
+             " title TEXT,"
+             " date INTEGER,"
+             " time INTEGER,"
+             " duration INTEGER,"
+             " description TEXT,"
+             " website TEXT,"
+             " url TEXT,"
+             " urlSmallOffset INTEGER,"
+             " urlSmallSuffix TEXT,"
+             " urlLargeOffset INTEGER,"
+             " urlLargeSuffix TEXT)");
+
 DEFINE_QUERY(truncateShows, "DELETE FROM shows");
+
+DEFINE_QUERY(createShowsByKey, "CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)");
+
+DEFINE_QUERY(createShowsByText,
+             "CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
+             " channel,"
+             " topic,"
+             " title,"
+             " content=shows)");
+
+DEFINE_QUERY(rebuildShowsByText, "INSERT INTO showsByText(showsByText) VALUES('rebuild')");
 
 DEFINE_QUERY(deleteShow, "DELETE FROM shows WHERE key = ?");
 
@@ -186,11 +215,11 @@ DEFINE_QUERY(selectShow,
              " urlLargeOffset, urlLargeSuffix"
              " FROM shows WHERE id = ?");
 
-DEFINE_QUERY(selectChannels, "SELECT DISTINCT(channel) FROM shows");
+DEFINE_QUERY(selectChannels, "SELECT DISTINCT(channel) FROM showsByText");
 
-DEFINE_QUERY(selectTopics, "SELECT DISTINCT(topic) FROM shows");
+DEFINE_QUERY(selectTopics, "SELECT DISTINCT(topic) FROM showsByText");
 
-DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM shows WHERE channel LIKE ('%' || ? || '%')");
+DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM showsByText WHERE showsByText MATCH 'channel : \"' || ? || '\"'");
 
 #undef DEFINE_QUERY
 
@@ -234,6 +263,7 @@ public:
         , m_insertShow(database)
     {
         Query(database).exec(Queries::truncateShows);
+
         m_insertShow.prepare(Queries::insertShow);
     }
 
@@ -337,31 +367,9 @@ Database::Database(Settings& settings, QObject* parent)
     {
         Query query(m_database);
 
-        query.exec(QStringLiteral(
-                       "CREATE TABLE IF NOT EXISTS shows ("
-                       " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                       " key BLOB,"
-                       " channel TEXT,"
-                       " topic TEXT,"
-                       " title TEXT,"
-                       " date INTEGER,"
-                       " time INTEGER,"
-                       " duration INTEGER,"
-                       " description TEXT,"
-                       " website TEXT,"
-                       " url TEXT,"
-                       " urlSmallOffset INTEGER,"
-                       " urlSmallSuffix TEXT,"
-                       " urlLargeOffset INTEGER,"
-                       " urlLargeSuffix TEXT)"));
-
-        query.exec(QStringLiteral("CREATE UNIQUE INDEX IF NOT EXISTS showsByKey ON shows (key)"));
-
-        query.exec(QStringLiteral("CREATE VIRTUAL TABLE IF NOT EXISTS showsByText USING FTS5 ("
-                                  " channel,"
-                                  " topic,"
-                                  " title,"
-                                  " content=shows)"));
+        query.exec(Queries::createShows);
+        query.exec(Queries::createShowsByKey);
+        query.exec(Queries::createShowsByText);
 
         m_preparedQueries.reset(new PreparedQueries(m_database));
     }
@@ -381,12 +389,10 @@ void Database::fullUpdate(const QByteArray& data)
     update< FullUpdate >(data);
 }
 
-
 void Database::partialUpdate(const QByteArray& data)
 {
     update< PartialUpdate >(data);
 }
-
 
 template< typename Processor >
 void Database::update(const QByteArray& data)
@@ -410,7 +416,7 @@ void Database::update(const QByteArray& data)
 
             processor.commit();
 
-            Query(m_database).exec(QStringLiteral("INSERT INTO showsByText(showsByText) VALUES('rebuild')"));
+            Query(m_database).exec(Queries::rebuildShowsByText);
 
             m_settings.setDatabaseUpdatedOn();
 
