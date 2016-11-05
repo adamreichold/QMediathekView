@@ -449,17 +449,17 @@ QVector< quintptr > Database::query(
 
     if(!channel.isEmpty())
     {
-        filterClauses.append("channel : \"' || ? || '\"");
+        filterClauses.append("channel : \"' || ? || '\"*");
     }
 
     if(!topic.isEmpty())
     {
-        filterClauses.append("topic : \"' || ? || '\"");
+        filterClauses.append("topic : \"' || ? || '\"*");
     }
 
     if(!title.isEmpty())
     {
-        filterClauses.append("title : \"' || ? || '\"");
+        filterClauses.append("title : \"' || ? || '\"*");
     }
 
     const auto filterClause = filterClauses.isEmpty() ? QStringLiteral("1")
