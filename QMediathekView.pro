@@ -11,6 +11,8 @@ QT += core concurrent xml sql network gui widgets
 CONFIG += link_pkgconfig
 PKGCONFIG += liblzma
 
+LIBS += -lboost_date_time -lboost_serialization
+
 TARGET = QMediathekView
 TEMPLATE = app
 

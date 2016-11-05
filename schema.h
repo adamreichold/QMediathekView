@@ -22,41 +22,42 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SCHEMA_H
 #define SCHEMA_H
 
-#include <QDateTime>
+#include <boost/date_time/gregorian/gregorian_types.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace QMediathekView
 {
 
 struct Show
 {
-    QString channel;
-    QString topic;
-    QString title;
+    std::string channel;
+    std::string topic;
+    std::string title;
 
-    QDate date;
-    QTime time;
+    boost::gregorian::date date;
+    boost::posix_time::time_duration time;
 
-    QTime duration;
+    boost::posix_time::time_duration duration;
 
-    QString description;
-    QString website;
+    std::string description;
+    std::string website;
 
-    QString url;
+    std::string url;
 
     unsigned short urlSmallOffset = 0;
-    QString urlSmallSuffix;
+    std::string urlSmallSuffix;
 
-    QString urlSmall() const
+    std::string urlSmall() const
     {
-        return url.left(urlSmallOffset).append(urlSmallSuffix);
+        return url.substr(0, urlSmallOffset) + urlSmallSuffix;
     }
 
     unsigned short urlLargeOffset = 0;
-    QString urlLargeSuffix;
+    std::string urlLargeSuffix;
 
-    QString urlLarge() const
+    std::string urlLarge() const
     {
-        return url.left(urlLargeOffset).append(urlLargeSuffix);
+        return url.substr(0, urlLargeOffset) + urlLargeSuffix;
     }
 
 };

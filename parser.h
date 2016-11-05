@@ -22,6 +22,8 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <QByteArray>
+
 #include "schema.h"
 
 namespace QMediathekView

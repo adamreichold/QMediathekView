@@ -76,25 +76,17 @@ public:
 private:
     const Database& m_database;
 
-    QString m_channel;
-    QString m_topic;
-    QString m_title;
+    std::string m_channel;
+    std::string m_topic;
+    std::string m_title;
 
     int m_sortColumn = 0;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
 
-    QVector< quintptr > m_id;
+    std::vector< quintptr > m_id;
     int m_fetched = 0;
 
     void query();
-
-    mutable QCache< quintptr, Show > m_cache;
-
-    template< typename Member >
-    using ResultOf = typename std::decay< typename std::result_of< Member(Show) >::type >::type;
-
-    template< typename Member >
-    ResultOf< Member > fetchShow(const quintptr id, Member member) const;
 
     QStringListModel* m_channels;
     QStringListModel* m_topics;
