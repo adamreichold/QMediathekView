@@ -159,6 +159,10 @@ namespace Queries
 
 #define DEFINE_QUERY(name, text) const auto name = QStringLiteral(text)
 
+DEFINE_QUERY(userVersion, "PRAGMA user_version");
+
+DEFINE_QUERY(setUserVersion, "PRAGMA user_version = %1");
+
 DEFINE_QUERY(createShows,
              "CREATE TABLE IF NOT EXISTS shows ("
              " id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -223,6 +227,25 @@ DEFINE_QUERY(selectTopicsByChannel, "SELECT DISTINCT(topic) FROM showsByText WHE
 
 #undef DEFINE_QUERY
 
+}
+
+int userVersion(QSqlDatabase& database)
+{
+    Query query(database);
+
+    query.exec(Queries::userVersion);
+
+    if (!query.nextRecord())
+    {
+        return 0;
+    }
+
+    return query.nextValue< int >();
+}
+
+void setUserVersion(QSqlDatabase& database, const int userVersion)
+{
+    Query(database).exec(Queries::setUserVersion.arg(userVersion));
 }
 
 QByteArray keyOf(const Show& show)
@@ -365,6 +388,21 @@ Database::Database(Settings& settings, QObject* parent)
 
     try
     {
+        constexpr auto currentVersion = 1;
+
+        if (userVersion(m_database) != currentVersion)
+        {
+            m_database.close();
+
+            QDir(path).remove(databaseName);
+
+            m_settings.resetDatabaseUpdatedOn();
+
+            m_database.open();
+
+            setUserVersion(m_database, currentVersion);
+        }
+
         Query query(m_database);
 
         query.exec(Queries::createShows);
@@ -545,9 +583,14 @@ std::unique_ptr< Show > Database::show(const quintptr id) const
 {
     std::unique_ptr< Show > show(new Show);
 
+    if (!m_preparedQueries)
+    {
+        return show;
+    }
+
     try
     {
-        Query& query = m_preparedQueries->selectShow << id;
+        auto& query = m_preparedQueries->selectShow << id;
 
         query.exec();
 
@@ -586,9 +629,14 @@ QStringList Database::channels() const
 {
     QStringList channels;
 
+    if (!m_preparedQueries)
+    {
+        return channels;
+    }
+
     try
     {
-        Query& query = m_preparedQueries->selectChannels;
+        auto& query = m_preparedQueries->selectChannels;
 
         query.exec();
 
@@ -609,11 +657,16 @@ QStringList Database::topics(const QString& channel) const
 {
     QStringList topics;
 
+    if (!m_preparedQueries)
+    {
+        return topics;
+    }
+
     try
     {
-        Query& query = channel.isEmpty()
-                       ? m_preparedQueries->selectTopics
-                       : m_preparedQueries->selectTopicsByChannel << channel;
+        auto& query = channel.isEmpty()
+                      ? m_preparedQueries->selectTopics
+                      : m_preparedQueries->selectTopicsByChannel << channel;
 
         query.exec();
 

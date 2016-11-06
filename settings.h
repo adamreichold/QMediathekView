@@ -62,9 +62,11 @@ public:
 
     QDateTime mirrorsUpdatedOn() const;
     void setMirrorsUpdatedOn();
+    void resetMirrorsUpdatedOn();
 
     QDateTime databaseUpdatedOn() const;
     void setDatabaseUpdatedOn();
+    void resetDatabaseUpdatedOn();
 
     QString playCommand() const;
     void setPlayCommand(const QString& command);

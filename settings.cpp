@@ -157,6 +157,11 @@ void Settings::setMirrorsUpdatedOn()
     m_settings->setValue(Keys::mirrorsUpdatedOn, QDateTime::currentDateTime());
 }
 
+void Settings::resetMirrorsUpdatedOn()
+{
+    m_settings->remove(Keys::mirrorsUpdatedOn);
+}
+
 QDateTime Settings::databaseUpdatedOn() const
 {
     return m_settings->value(Keys::databaseUpdatedOn).toDateTime();
@@ -165,6 +170,11 @@ QDateTime Settings::databaseUpdatedOn() const
 void Settings::setDatabaseUpdatedOn()
 {
     m_settings->setValue(Keys::databaseUpdatedOn, QDateTime::currentDateTime());
+}
+
+void Settings::resetDatabaseUpdatedOn()
+{
+    m_settings->remove(Keys::databaseUpdatedOn);
 }
 
 QString Settings::playCommand() const
