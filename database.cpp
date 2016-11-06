@@ -398,7 +398,11 @@ Database::Database(Settings& settings, QObject* parent)
 
             m_settings.resetDatabaseUpdatedOn();
 
-            m_database.open();
+            if (!m_database.open())
+            {
+                qDebug() << m_database.lastError();
+                return;
+            }
 
             setUserVersion(m_database, currentVersion);
         }
