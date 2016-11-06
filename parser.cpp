@@ -183,9 +183,9 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
 
     boost::spirit::qi::rule< Iterator, std::string() > escapedText;
 
-    Grammar(Processor& inserter)
+    Grammar(Processor& processor)
         : Grammar::base_type(start)
-        , processor(inserter)
+        , processor(processor)
     {
         using std::bind;
         using std::placeholders::_1;
@@ -197,6 +197,9 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         using boost::spirit::qi::lexeme;
         using boost::spirit::qi::lit;
 
+        // TODO: Convert UTF-16 code points into UTF-8 code points using std::codecvt...
+        using CodePoint = boost::spirit::qi::uint_parser< unsigned short, 16, 4, 4 >;
+
         escapedText %= *(~char_("\\\"")
                          | (lit("\\\\") >> attr('\\'))
                          | (lit("\\\"") >> attr('"'))
@@ -204,11 +207,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
                          | (lit("\\f") >> attr('\f'))
                          | (lit("\\n") >> attr('\n'))
                          | (lit("\\r") >> attr('\r'))
-                         | (lit("\\t") >> attr('\t')));
+                         | (lit("\\t") >> attr('\t'))
+                         | (lit("\\u") >> CodePoint()));
 
         ignoredItem %= lexeme[eps
                 >> lit('"')
-                >> *(~char_("\\\"") | (lit('\\') >> char_("\\\"bfnrt")))
+                >> *(~char_("\\\"") | (lit('\\') >> char_("\\\"bfnrtu")))
                 >> lit('"')];
 
         emptyItem %= lit("\"\"");
