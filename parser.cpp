@@ -121,7 +121,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.url = QString::fromStdString(url);
     }
 
-    void setUrlSmall(const boost::fusion::vector< int, std::string >& replacement)
+    void setUrlSmallExplicit(const boost::fusion::vector< int, std::string >& replacement)
     {
         using boost::fusion::at_c;
 
@@ -132,13 +132,19 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         show.urlSmallSuffix = QString::fromStdString(suffix);
     }
 
+    void setUrlSmallImplicit(const std::string& suffix)
+    {
+        show.urlSmallOffset = show.url.size();
+        show.urlSmallSuffix = QString::fromStdString(suffix);
+    }
+
     void resetUrlSmall()
     {
         show.urlSmallOffset = 0;
         show.urlSmallSuffix.clear();
     }
 
-    void setUrlLarge(const boost::fusion::vector< int, std::string >& replacement)
+    void setUrlLargeExplicit(const boost::fusion::vector< int, std::string >& replacement)
     {
         using boost::fusion::at_c;
 
@@ -146,6 +152,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         const auto& suffix = at_c<1>(replacement);
 
         show.urlLargeOffset = offset;
+        show.urlLargeSuffix = QString::fromStdString(suffix);
+    }
+
+    void setUrlLargeImplicit(const std::string& suffix)
+    {
+        show.urlLargeOffset = show.url.size();
         show.urlLargeSuffix = QString::fromStdString(suffix);
     }
 
@@ -254,8 +266,12 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         websiteItem %= textItem[bind(&Grammar::setWebsite, this, _1)];
 
         urlItem %= textItem[bind(&Grammar::setUrl, this, _1)];
-        urlSmallItem %= textReplacementItem[bind(&Grammar::setUrlSmall, this, _1)] | emptyItem[bind(&Grammar::resetUrlSmall, this)];
-        urlLargeItem %= textReplacementItem[bind(&Grammar::setUrlLarge, this, _1)] | emptyItem[bind(&Grammar::resetUrlLarge, this)];
+        urlSmallItem %= textReplacementItem[bind(&Grammar::setUrlSmallExplicit, this, _1)]
+                | textItem[bind(&Grammar::setUrlSmallImplicit, this, _1)]
+                | emptyItem[bind(&Grammar::resetUrlSmall, this)];
+        urlLargeItem %= textReplacementItem[bind(&Grammar::setUrlLargeExplicit, this, _1)]
+                | textItem[bind(&Grammar::setUrlLargeImplicit, this, _1)]
+                | emptyItem[bind(&Grammar::resetUrlLarge, this)];
 
         headerList %= lit("\"Filmliste\"")
                 >> lit(':')
