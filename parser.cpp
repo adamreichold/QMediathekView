@@ -21,6 +21,8 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "parser.h"
 
+#include <uchar.h>
+
 #include <boost/spirit/include/qi.hpp>
 
 namespace QMediathekView
@@ -28,6 +30,16 @@ namespace QMediathekView
 
 namespace
 {
+
+std::string parseCodePoint(const unsigned short codePoint)
+{
+    std::string result(MB_CUR_MAX, '\0');
+
+    static mbstate_t state;
+    c16rtomb(&result[0], codePoint, &state);
+
+    return result;
+}
 
 // *INDENT-OFF*
 
@@ -209,7 +221,6 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
         using boost::spirit::qi::lexeme;
         using boost::spirit::qi::lit;
 
-        // TODO: Convert UTF-16 code points into UTF-8 code points using std::codecvt...
         using CodePoint = boost::spirit::qi::uint_parser< unsigned short, 16, 4, 4 >;
 
         escapedText %= *(~char_("\\\"")
@@ -220,7 +231,7 @@ struct Grammar : boost::spirit::qi::grammar< Iterator, void(), Skipper >
                          | (lit("\\n") >> attr('\n'))
                          | (lit("\\r") >> attr('\r'))
                          | (lit("\\t") >> attr('\t'))
-                         | (lit("\\u") >> CodePoint()));
+                         | (lit("\\u") >> CodePoint()[parseCodePoint]));
 
         ignoredItem %= lexeme[eps
                 >> lit('"')
