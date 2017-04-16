@@ -3,6 +3,6 @@ Type=Application
 Terminal=false
 Name=QMediathekView
 Comment=An alternative front-end to the MediathekView database
-Categories=AudioVideo;
+Categories=Qt;AudioVideo;Player;Video;
 TryExec=QMediathekView
 Exec=QMediathekView
