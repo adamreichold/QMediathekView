@@ -126,7 +126,12 @@ void DownloadDialog::start()
 
     QNetworkRequest request(m_url);
     request.setHeader(QNetworkRequest::UserAgentHeader, m_settings.userAgent());
+
+#if QT_VERSION >= QT_VERSION_CHECK(5,6,0)
+
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+
+#endif
 
     m_networkReply.reset(m_networkManager->get(request));
 
