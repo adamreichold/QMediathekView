@@ -4,6 +4,7 @@ Terminal=false
 Name=QMediathekView
 Comment=An alternative front-end to the MediathekView database
 Categories=Qt;AudioVideo;Player;Video;
+Icon=QMediathekView
 TryExec=QMediathekView
 Exec=QMediathekView
 Icon=qmediathekview
