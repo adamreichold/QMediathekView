@@ -27,7 +27,8 @@ branches:
   - continuous
 
 before_deploy:
-- git tag continuous
+- export TRAVIS_TAG=continuous
+- git tag --force $TRAVIS_TAG
 
 deploy:
   provider: releases
