@@ -116,6 +116,8 @@ Application::Application(int& argc, char** argv)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_mainWindow(new MainWindow(*m_settings, *m_model, *this))
 {
+    QGuiApplication::setWindowIcon(QIcon::fromTheme(projectName));
+
     connect(m_database, &Database::updated, m_model, &Model::update);
 
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
@@ -432,8 +434,10 @@ void Application::downloadDatabase(const QString& url, const Consumer& consumer)
 
 int main(int argc, char** argv)
 {
-    QApplication::setOrganizationName(QMediathekView::projectName);
-    QApplication::setApplicationName(QMediathekView::projectName);
+    using namespace QMediathekView;
 
-    return QMediathekView::Application(argc, argv).exec();
+    QApplication::setOrganizationName(projectName);
+    QApplication::setApplicationName(projectName);
+
+    return Application(argc, argv).exec();
 }

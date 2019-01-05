@@ -21,6 +21,9 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "mainwindow.h"
 
+#include <functional>
+
+#include <QClipboard>
 #include <QComboBox>
 #include <QDockWidget>
 #include <QFormLayout>
@@ -28,6 +31,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include <QHeaderView>
 #include <QLineEdit>
 #include <QLabel>
+#include <QMenu>
 #include <QPushButton>
 #include <QShortcut>
 #include <QStatusBar>
@@ -66,6 +70,19 @@ void forEachSelectedRow(const QAbstractItemView* view, Action action)
     }
 }
 
+template< typename Getter >
+void copyLinksOfSelectedRows(const QAbstractItemView* view, Getter getter)
+{
+    QStringList urls;
+
+    forEachSelectedRow(view, [getter, &urls](const QModelIndex& index)
+    {
+        urls.append(getter(index));
+    });
+
+    QGuiApplication::clipboard()->setText(urls.join('\n'));
+}
+
 } // anonymous
 
 MainWindow::MainWindow(Settings& settings, Model& model, Application& application, QWidget* parent)
@@ -86,13 +103,15 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_tableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_tableView->verticalHeader()->setVisible(false);
     m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     m_tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
-    connect(m_tableView, &QTableView::activated, this, &MainWindow::activated);
+    connect(m_tableView, &QTableView::doubleClicked, this, &MainWindow::doubleClicked);
     connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentChanged);
+    connect(m_tableView, &QTableView::customContextMenuRequested, this, &MainWindow::customContextMenuRequested);
 
     const auto searchDock = new QDockWidget(tr("Search"), this);
     searchDock->setObjectName(QStringLiteral("searchDock"));
@@ -325,7 +344,7 @@ void MainWindow::timeout()
     m_model.filter(channel, topic, title);
 }
 
-void MainWindow::activated(const QModelIndex& index)
+void MainWindow::doubleClicked(const QModelIndex& index)
 {
     m_application.playPreferred(index);
 }
@@ -334,6 +353,40 @@ void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /
 {
     m_descriptionEdit->setPlainText(m_model.description(current));
     m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current)));
+}
+
+void MainWindow::customContextMenuRequested(const QPoint& pos)
+{
+    using std::bind;
+    using std::placeholders::_1;
+
+    const auto index = m_tableView->indexAt(pos);
+
+    if (!index.isValid())
+    {
+        return;
+    }
+
+    QMenu menu;
+
+    connect(menu.addAction(tr("&Copy link")), &QAction::triggered, [this]()
+    {
+        copyLinksOfSelectedRows(m_tableView, bind(&Application::preferredUrl, &m_application, _1));
+    });
+    connect(menu.addAction(tr("Copy &default link")), &QAction::triggered, [this]()
+    {
+        copyLinksOfSelectedRows(m_tableView, bind(&Model::url, &m_model, _1));
+    });
+    connect(menu.addAction(tr("Copy &small link")), &QAction::triggered, [this]()
+    {
+        copyLinksOfSelectedRows(m_tableView, bind(&Model::urlSmall, &m_model, _1));
+    });
+    connect(menu.addAction(tr("Copy &large link")), &QAction::triggered, [this]()
+    {
+        copyLinksOfSelectedRows(m_tableView, bind(&Model::urlLarge, &m_model, _1));
+    });
+
+    menu.exec(m_tableView->viewport()->mapToGlobal(pos));
 }
 
 } // QMediathekView
