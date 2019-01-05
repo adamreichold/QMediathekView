@@ -7,4 +7,3 @@ Categories=Qt;AudioVideo;Player;Video;
 Icon=QMediathekView
 TryExec=QMediathekView
 Exec=QMediathekView
-Icon=qmediathekview
