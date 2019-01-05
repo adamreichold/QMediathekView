@@ -73,8 +73,9 @@ private:
     void downloadLargeTriggered();
 
     void timeout();
-    void activated(const QModelIndex& index);
+    void doubleClicked(const QModelIndex& index);
     void currentChanged(const QModelIndex& current, const QModelIndex& previous);
+    void customContextMenuRequested(const QPoint& pos);
 
 private:
     Settings& m_settings;

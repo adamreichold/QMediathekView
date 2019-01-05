@@ -71,9 +71,9 @@ public:
     void updateMirrors();
     void updateDatabase();
 
-private:
     QString preferredUrl(const QModelIndex& index) const;
 
+private:
     void startPlay(const QString& url) const;
     void startDownload(const QString& title, const QString& url) const;
 
