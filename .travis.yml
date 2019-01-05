@@ -7,8 +7,8 @@ addons:
     sources:
     - sourceline: 'ppa:beineri/opt-qt593-trusty'
     packages:
-    - qt59base
     - libboost1.55-dev
+    - qt59base
 
 script:
 - . /opt/qt*/bin/qt*-env.sh
@@ -17,7 +17,7 @@ script:
 - make INSTALL_ROOT=appdir install
 
 after_success:
-- wget --no-verbose "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+- wget --continue --no-verbose "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
 - chmod a+x linuxdeployqt-continuous-x86_64.AppImage
 - unset QTDIR; unset QT_PLUGIN_PATH; unset LD_LIBRARY_PATH
 - VERSION=`git rev-parse --short HEAD` ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage -extra-plugins=iconengines/libqsvgicon.so
