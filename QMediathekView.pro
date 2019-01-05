@@ -42,4 +42,7 @@ target.path = /usr/bin
 launcher.files = $${TARGET}.desktop
 launcher.path = /usr/share/applications
 
-INSTALLS += target launcher
+icon.files = $${TARGET}.svg
+icon.path = /usr/share/icons/hicolor/scalable/apps
+
+INSTALLS += target launcher icon
