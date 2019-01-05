@@ -74,7 +74,8 @@ public:
     Decompressor()
         : m_stream(LZMA_STREAM_INIT)
     {
-        Q_UNUSED(lzma_stream_decoder(&m_stream, UINT64_MAX, LZMA_TELL_NO_CHECK));
+        lzma_ret result __attribute__((unused));
+        result = lzma_stream_decoder(&m_stream, UINT64_MAX, LZMA_TELL_NO_CHECK);
     }
 
     void appendData(const QByteArray& data)
@@ -401,7 +402,7 @@ void Application::downloadDatabase(const QString& url, const Consumer& consumer)
 
     const auto reply = m_networkManager->get(request);
 
-    connect(reply, &QNetworkReply::readyRead, [this, reply, decompressor]()
+    connect(reply, &QNetworkReply::readyRead, [reply, decompressor]()
     {
         if (reply->error())
         {
