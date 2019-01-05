@@ -6,3 +6,4 @@ Comment=An alternative front-end to the MediathekView database
 Categories=Qt;AudioVideo;Player;Video;
 TryExec=QMediathekView
 Exec=QMediathekView
+Icon=qmediathekview
