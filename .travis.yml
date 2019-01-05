@@ -1,0 +1,13 @@
+language: cpp
+compiler: gcc
+
+dist: xenial
+addons:
+  apt:
+    packages:
+    - libboost-dev
+    - qt5-default
+
+script:
+  - qmake
+  - make -j$(nproc)
