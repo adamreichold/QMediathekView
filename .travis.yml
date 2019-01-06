@@ -9,6 +9,7 @@ addons:
     packages:
     - libboost1.55-dev
     - qt59base
+    - qt59svg
 
 script:
 - . /opt/qt*/bin/qt*-env.sh
@@ -20,29 +21,27 @@ after_success:
 - wget --continue --no-verbose "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
 - chmod a+x linuxdeployqt-continuous-x86_64.AppImage
 - unset QTDIR; unset QT_PLUGIN_PATH; unset LD_LIBRARY_PATH
-- VERSION=`git rev-parse --short HEAD` ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage -extra-plugins=iconengines/libqsvgicon.so
-- mv QMediathekView-*-x86_64.AppImage QMediathekView-continuous-x86_64.AppImage
-- mv QMediathekView-*-x86_64.AppImage.zsync QMediathekView-continuous-x86_64.AppImage.zsync
+- export VERSION=`git rev-parse --short HEAD`
+- ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage -extra-plugins=iconengines/libqsvgicon.so
 
 branches:
   except:
-  - continuous
+  - /^build-/
 
 before_deploy:
-- export TRAVIS_TAG=continuous
-- git tag --force $TRAVIS_TAG
+- export TRAVIS_TAG=build-$VERSION
+- git tag $TRAVIS_TAG
 
 deploy:
   provider: releases
   api_key:
     secure: icmBxMxb+dxeNlcXnEzcU8ZE5NrDcwtYALZYAzvgKdL0WxAFAbgKKcx2wN7pAbY34wQsfafYPnMx2Indbkd0/9EE4cFvqvupX8MUe1b6mMGiYXEPJ4z8jYhgeMUcAFct4JPIOV7GXb8hYfUYH+VfgfFWT7XlZSkMdD/pdN/7osCyEW3nx/d8VXbqw9URhVapaO+Po2ZOkP2sVjzHkT7I/a17riwBlpb61GuuTqsPhjGNNNIdTTXLQ2hnMBpJoS1M0fV57PXzgGciRiGRlirdvTu+G3tWQfnOleupfrjX+hewzUH6I1WCn48jEpwMJmNDHo/YNDzYYOxiVvB4giUFDbf0iX5NbXDIl8Dq4fQAlOAMw7E6xyrTypqpmlka/TuCItDMaubbCAZoots4oZ+jN6r5bgJ+tfpRUR9d0OcHpm7mq4IzBebm152gpqmg32FYSs5Rcdq4kZKpdYT9CCH+qGQZmqLXDD4ZL8E2Bn7nXre45rJztYsFkGhJjz6hGb4vUr+ROEPTWYVOl5jKg1KkxgezOcaom7Qj1+XzbPezTOnNoaBgwyIx/2cuFFTW3z3+L1I+yWE0CoAKmUe5/g3UHXP+oBO3wGMIH5zXsMU7SzJRxg/TMBmXjG1UXFbF/5pNFkGb3ok5N1VGFJYxY6N/g3K9ddX801hkUOkT2/5yUs4=
   file:
-    - $TRAVIS_BUILD_DIR/QMediathekView-continuous-x86_64.AppImage
-    - $TRAVIS_BUILD_DIR/QMediathekView-continuous-x86_64.AppImage.zsync
+    - $TRAVIS_BUILD_DIR/QMediathekView*.AppImage*
   skip_cleanup: true
-  overwrite: true
+  file_glob: true
+  name: Automatic build
   prerelease: true
-  name: Continuous build
   on:
     branch: master
     repo: adamreichold/QMediathekView
