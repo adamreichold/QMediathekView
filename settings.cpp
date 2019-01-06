@@ -88,9 +88,7 @@ Settings::Settings(QObject* parent) : QObject(parent),
 {
 }
 
-Settings::~Settings()
-{
-}
+Settings::~Settings() = default;
 
 QString Settings::userAgent() const
 {

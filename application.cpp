@@ -132,9 +132,7 @@ Application::Application(int& argc, char** argv)
     connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
 }
 
-Application::~Application()
-{
-}
+Application::~Application() = default;
 
 int Application::exec()
 {

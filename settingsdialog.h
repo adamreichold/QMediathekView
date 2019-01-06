@@ -43,7 +43,7 @@ public:
     ~SettingsDialog();
 
 public:
-    void accept();
+    void accept() override;
 
 private:
     void selectDownloadFolder();

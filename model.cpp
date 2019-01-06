@@ -45,9 +45,7 @@ Model::Model(Database& database, QObject* parent) : QAbstractTableModel(parent),
     update();
 }
 
-Model::~Model()
-{
-}
+Model::~Model() = default;
 
 int Model::columnCount(const QModelIndex& parent) const
 {

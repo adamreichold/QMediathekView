@@ -86,9 +86,7 @@ SettingsDialog::SettingsDialog(
     connect(buttonBox, &QDialogButtonBox::rejected, this, &SettingsDialog::reject);
 }
 
-SettingsDialog::~SettingsDialog()
-{
-}
+SettingsDialog::~SettingsDialog() = default;
 
 void SettingsDialog::accept()
 {
