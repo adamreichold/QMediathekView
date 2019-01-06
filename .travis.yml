@@ -21,15 +21,14 @@ after_success:
 - wget --continue --no-verbose "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
 - chmod a+x linuxdeployqt-continuous-x86_64.AppImage
 - unset QTDIR; unset QT_PLUGIN_PATH; unset LD_LIBRARY_PATH
-- export VERSION=`git rev-parse --short HEAD`
-- ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage -extra-plugins=iconengines/libqsvgicon.so
+- VERSION=`git rev-parse --short HEAD` ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage -extra-plugins=iconengines/libqsvgicon.so
 
 branches:
   except:
   - /^build-/
 
 before_deploy:
-- export TRAVIS_TAG=build-$VERSION
+- export TRAVIS_TAG=build-`date +'%Y%m%dT%H%M%S'`
 - git tag $TRAVIS_TAG
 
 deploy:
