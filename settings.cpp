@@ -21,7 +21,9 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "settings.h"
 
+#include <QProcess>
 #include <QSettings>
+#include <QStandardPaths>
 
 namespace QMediathekView
 {
@@ -73,13 +75,35 @@ const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/d
 constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
 
-const auto playCommand = QStringLiteral("vlc %1");
-
-const auto downloadFolder = QDir::homePath();
-
 constexpr auto preferredUrl = Url::Default;
 
 } // Defaults
+
+QString defaultPlayCommand()
+{
+    QString command("vlc");
+
+    QProcess shell;
+    shell.start("sh", QStringList() << "-c" << "grep '^Exec=' /usr/share/applications/`xdg-mime query default video/mp4` | cut -d'=' -f2 | cut -d' ' -f1", QIODevice::ReadOnly);
+    shell.waitForFinished();
+
+    if (shell.exitStatus() == QProcess::NormalExit)
+    {
+        const auto greppedCommand = QString::fromLocal8Bit(shell.readAll()).trimmed();
+
+        if (!greppedCommand.isEmpty())
+        {
+            command = greppedCommand;
+        }
+    }
+
+    return command.append(" %1");
+}
+
+QString defaultDownloadFolder()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+}
 
 } // anonymous
 
@@ -177,7 +201,7 @@ void Settings::resetDatabaseUpdatedOn()
 
 QString Settings::playCommand() const
 {
-    return m_settings->value(Keys::playCommand, Defaults::playCommand).toString();
+    return m_settings->value(Keys::playCommand, defaultPlayCommand()).toString();
 }
 
 void Settings::setPlayCommand(const QString& command)
@@ -197,7 +221,7 @@ void Settings::setDownloadCommand(const QString& command)
 
 QDir Settings::downloadFolder() const
 {
-    return QDir(m_settings->value(Keys::downloadFolder, Defaults::downloadFolder).toString());
+    return QDir(m_settings->value(Keys::downloadFolder, defaultDownloadFolder()).toString());
 }
 
 void Settings::setDownloadFolder(const QDir& folder)
