@@ -45,4 +45,7 @@ launcher.path = /usr/share/applications
 icon.files = $${TARGET}.svg
 icon.path = /usr/share/icons/hicolor/scalable/apps
 
-INSTALLS += target launcher icon
+appdata.files = $${TARGET}.appdata.xml
+appdata.path = /usr/share/metainfo
+
+INSTALLS += target launcher icon appdata
