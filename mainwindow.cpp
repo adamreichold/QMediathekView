@@ -115,6 +115,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
 
     const auto searchDock = new QDockWidget(tr("Search"), this);
     searchDock->setObjectName(QStringLiteral("searchDock"));
+    searchDock->setFeatures(searchDock->features() & ~QDockWidget::DockWidgetClosable);
     addDockWidget(Qt::BottomDockWidgetArea, searchDock);
 
     const auto searchWidget = new QWidget(searchDock);
@@ -174,6 +175,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
 
     const auto detailsDock = new QDockWidget(tr("Details"), this);
     detailsDock->setObjectName(QStringLiteral("detailsDock"));
+    detailsDock->setFeatures(detailsDock->features() & ~QDockWidget::DockWidgetClosable);
     addDockWidget(Qt::BottomDockWidgetArea, detailsDock);
 
     const auto detailsWidget = new QWidget(detailsDock);
