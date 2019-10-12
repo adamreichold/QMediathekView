@@ -532,14 +532,11 @@ QVector< quintptr > Database::query(
         filterClauses.append("title : \"' || ? || '\"*");
     }
 
-    const auto filterClause = filterClauses.isEmpty() ? QStringLiteral("1")
-                              : QStringLiteral("showsByText MATCH '%1'").arg(filterClauses.join(QStringLiteral(" AND ")));
-
     try
     {
         Query query(m_database);
 
-        if(channel.isEmpty() && topic.isEmpty() && title.isEmpty())
+        if(filterClauses.isEmpty())
         {
             query.prepare(QStringLiteral("SELECT id FROM shows ORDER BY %1").arg(sortClause));
         }
@@ -549,8 +546,8 @@ QVector< quintptr > Database::query(
                                          " FROM showsByText"
                                          " JOIN shows"
                                          " ON showsByText.rowid = shows.id"
-                                         " WHERE %1 ORDER BY %4")
-                          .arg(filterClause).arg(sortClause));
+                                         " WHERE showsByText MATCH '%1' ORDER BY %2")
+                          .arg(filterClauses.join(QStringLiteral(" AND "))).arg(sortClause));
 
             if(!channel.isEmpty())
             {
