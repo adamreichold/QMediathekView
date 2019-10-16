@@ -24,11 +24,11 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 
-#include <QFuture>
 #include <QObject>
-#include <QSqlDatabase>
 
 #include "schema.h"
+
+struct Internals;
 
 namespace QMediathekView
 {
@@ -49,27 +49,11 @@ signals:
     void failedToUpdate(const QString& error);
 
 public:
-    void fullUpdate(const QByteArray& data);
-    void partialUpdate(const QByteArray& data);
-
-private:
-    template< typename Processor >
-    void update(const QByteArray& data);
+    void fullUpdate(const QString& url);
+    void partialUpdate(const QString& url);
 
 public:
-    enum SortColumn
-    {
-        SortChannel,
-        SortTopic,
-        SortTitle,
-        SortDate,
-        SortTime,
-        SortDuration
-    };
-
-    QVector< quintptr > query(
-        const QString& channel, const QString& topic, const QString& title,
-        const SortColumn sortColumn, const Qt::SortOrder sortOrder) const;
+    QVector< quintptr > query(const QString& channel, const QString& topic, const QString& title) const;
 
 public:
     std::unique_ptr< Show > show(const quintptr id) const;
@@ -80,12 +64,10 @@ public:
 private:
     Settings& m_settings;
 
-    mutable QSqlDatabase m_database;
+    Internals* m_internals;
 
-    struct PreparedQueries;
-    QScopedPointer< PreparedQueries > m_preparedQueries;
-
-    QFuture< void > m_update;
+    static void needsUpdate(void* context);
+    static void updateCompleted(void* context, const char* error);
 
 };
 

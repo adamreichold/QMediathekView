@@ -42,22 +42,8 @@ struct Show
     QString website;
 
     QString url;
-
-    unsigned short urlSmallOffset = 0;
-    QString urlSmallSuffix;
-
-    QString urlSmall() const
-    {
-        return url.left(urlSmallOffset).append(urlSmallSuffix);
-    }
-
-    unsigned short urlLargeOffset = 0;
-    QString urlLargeSuffix;
-
-    QString urlLarge() const
-    {
-        return url.left(urlLargeOffset).append(urlLargeSuffix);
-    }
+    QString urlSmall;
+    QString urlLarge;
 
 };
 

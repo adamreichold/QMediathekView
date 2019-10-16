@@ -1,22 +1,30 @@
 CONFIG += c++11
 
-CONFIG(release, debug|release) {
-    QMAKE_CFLAGS += -flto
-    QMAKE_CXXFLAGS += -flto
-    QMAKE_LFLAGS += -flto
+CONFIG(debug, debug|release) {
+    internals.target = $${OUT_PWD}/internals/debug/libinternals.a
+    internals.commands = cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals"
 }
 
-QT += core concurrent xml sql network gui widgets
+CONFIG(release, debug|release) {
+    internals.target = $${OUT_PWD}/internals/release/libinternals.a
+    internals.commands = cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals" --release
+}
+
+internals.CONFIG = phony
+QMAKE_EXTRA_TARGETS += internals
+PRE_TARGETDEPS += $${internals.target}
+LIBS += $${internals.target} -ldl
+
+QT += core xml network gui widgets
 
 CONFIG += link_pkgconfig
-PKGCONFIG += liblzma
+PKGCONFIG += sqlite3 libcurl openssl liblzma
 
 TARGET = QMediathekView
 TEMPLATE = app
 
 SOURCES += \
     settings.cpp \
-    parser.cpp \
     database.cpp \
     model.cpp \
     miscellaneous.cpp \
@@ -28,7 +36,6 @@ SOURCES += \
 HEADERS += \
     settings.h \
     schema.h \
-    parser.h \
     database.h \
     model.h \
     miscellaneous.h \

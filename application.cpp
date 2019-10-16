@@ -68,44 +68,6 @@ QString randomItem(const QStringList& list)
     return list.at(distribution(generator));
 }
 
-class Decompressor
-{
-public:
-    Decompressor()
-        : m_stream(LZMA_STREAM_INIT)
-    {
-        lzma_ret result __attribute__((unused));
-        result = lzma_stream_decoder(&m_stream, UINT64_MAX, LZMA_TELL_NO_CHECK);
-    }
-
-    void appendData(const QByteArray& data)
-    {
-        m_stream.next_in = reinterpret_cast< const std::uint8_t* >(data.constData());
-        m_stream.avail_in = data.size();
-
-        for (lzma_ret result = LZMA_OK; result == LZMA_OK;)
-        {
-            m_stream.next_out = m_buffer;
-            m_stream.avail_out = sizeof(m_buffer);
-
-            result = lzma_code(&m_stream, LZMA_RUN);
-
-            m_data.append(reinterpret_cast< const char* >(m_buffer), sizeof(m_buffer) - m_stream.avail_out);
-        }
-    }
-
-    const QByteArray& data() const
-    {
-        return m_data;
-    }
-
-private:
-    lzma_stream m_stream;
-    std::uint8_t m_buffer[64 * 1024];
-    QByteArray m_data;
-
-};
-
 } // anonymous
 
 Application::Application(int& argc, char** argv)
@@ -243,19 +205,13 @@ void Application::updateDatabase()
     {
         const auto url = randomItem(m_settings->fullListMirrors());
 
-        downloadDatabase(url, [this](const QByteArray& data)
-        {
-            m_database->fullUpdate(data);
-        });
+        m_database->fullUpdate(url);
     }
     else
     {
         const auto url = randomItem(m_settings->partialListMirrors());
 
-        downloadDatabase(url, [this](const QByteArray& data)
-        {
-            m_database->partialUpdate(data);
-        });
+        m_database->partialUpdate(url);
     }
 }
 
@@ -389,42 +345,6 @@ void Application::downloadMirrors(const QString& url, const Consumer& consumer)
         }
 
         consumer(mirrors);
-    });
-}
-
-template< typename Consumer >
-void Application::downloadDatabase(const QString& url, const Consumer& consumer)
-{
-    const auto decompressor = std::make_shared< Decompressor >();
-
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::readyRead, [reply, decompressor]()
-    {
-        if (reply->error())
-        {
-            return;
-        }
-
-        decompressor->appendData(reply->readAll());
-    });
-
-    connect(reply, &QNetworkReply::finished, [this, consumer, reply, decompressor]()
-    {
-        reply->deleteLater();
-
-        if (reply->error())
-        {
-            emit failedToUpdateDatabase(reply->errorString());
-            return;
-        }
-
-        decompressor->appendData(reply->readAll());
-
-        consumer(decompressor->data());
     });
 }
 

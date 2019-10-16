@@ -52,7 +52,6 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
 
     void filter(const QString& channel, const QString& topic, const QString& title);
-    void sort(int column, Qt::SortOrder order) override;
 
 protected:
     bool canFetchMore(const QModelIndex& parent) const override;
@@ -81,9 +80,6 @@ private:
     QString m_channel;
     QString m_topic;
     QString m_title;
-
-    int m_sortColumn = 0;
-    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
 
     QVector< quintptr > m_id;
     int m_fetched = 0;

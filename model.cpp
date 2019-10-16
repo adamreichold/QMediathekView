@@ -176,28 +176,6 @@ void Model::filter(const QString& channel, const QString& topic, const QString& 
     endResetModel();
 }
 
-void Model::sort(int column, Qt::SortOrder order)
-{
-    if (column < 0 || column >= 6)
-    {
-        return;
-    }
-
-    if (m_sortColumn == column && m_sortOrder == order)
-    {
-        return;
-    }
-
-    beginResetModel();
-
-    m_sortColumn = column;
-    m_sortOrder = order;
-
-    query();
-
-    endResetModel();
-}
-
 bool Model::canFetchMore(const QModelIndex& parent) const
 {
     if (parent.isValid())
@@ -307,34 +285,7 @@ void Model::update()
 
 void Model::query()
 {
-    Database::SortColumn sortColumn;
-
-    switch (m_sortColumn)
-    {
-    default:
-    case 0:
-        sortColumn = Database::SortChannel;
-        break;
-    case 1:
-        sortColumn = Database::SortTopic;
-        break;
-    case 2:
-        sortColumn = Database::SortTitle;
-        break;
-    case 3:
-        sortColumn = Database::SortDate;
-        break;
-    case 4:
-        sortColumn = Database::SortTime;
-        break;
-    case 5:
-        sortColumn = Database::SortDuration;
-        break;
-    }
-
-    m_id = m_database.query(
-               m_channel, m_topic, m_title,
-               sortColumn, m_sortOrder);
+    m_id = m_database.query(m_channel, m_topic, m_title);
     m_fetched = 0;
 }
 

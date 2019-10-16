@@ -96,8 +96,6 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     setCentralWidget(m_tableView);
 
     m_tableView->setAlternatingRowColors(true);
-    m_tableView->sortByColumn(0, Qt::AscendingOrder);
-    m_tableView->setSortingEnabled(true);
     m_tableView->setTabKeyNavigation(false);
     m_tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
