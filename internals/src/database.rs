@@ -35,11 +35,7 @@ pub fn create_schema(path: &Path) -> Fallible<(Connection, bool)> {
 
     let mut conn = open_connection(path)?;
 
-    let user_version: i32 = conn.query_row(
-        "SELECT user_version FROM pragma_user_version",
-        NO_PARAMS,
-        |row| row.get(0),
-    )?;
+    let user_version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
 
     if user_version == 7 {
         return Ok((conn, false));
