@@ -2,12 +2,12 @@ CONFIG += c++11
 
 CONFIG(debug, debug|release) {
     internals.target = $${OUT_PWD}/internals/debug/libinternals.a
-    internals.commands = cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals"
+    internals.commands = LZMA_API_STATIC=1 cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals"
 }
 
 CONFIG(release, debug|release) {
     internals.target = $${OUT_PWD}/internals/release/libinternals.a
-    internals.commands = cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals" --release
+    internals.commands = LZMA_API_STATIC=1 cargo build --manifest-path "$${PWD}/internals/Cargo.toml" --target-dir "$${OUT_PWD}/internals" --release
 }
 
 internals.CONFIG = phony
@@ -16,9 +16,6 @@ PRE_TARGETDEPS += $${internals.target}
 LIBS += $${internals.target} -ldl
 
 QT += core xml network gui widgets
-
-CONFIG += link_pkgconfig
-PKGCONFIG += sqlite3 liblzma
 
 TARGET = QMediathekView
 TEMPLATE = app

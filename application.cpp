@@ -34,8 +34,6 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include <QTimer>
 #include <QUrl>
 
-#include <lzma.h>
-
 #include "settings.h"
 #include "database.h"
 #include "model.h"
