@@ -16,8 +16,8 @@ use std::str::from_utf8;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread::spawn;
 
-use failure::{format_err, Fallible};
-use isahc::{config::RedirectPolicy, HttpClient};
+use attohttpc::get;
+use failure::{ensure, format_err, Fallible};
 use rusqlite::{Connection, NO_PARAMS};
 use xz2::read::XzDecoder;
 
@@ -67,11 +67,15 @@ impl Internals {
         let (sender, receiver) = channel();
 
         let parser = spawn(move || -> Fallible<()> {
-            let client = HttpClient::builder()
-                .redirect_policy(RedirectPolicy::Follow)
-                .build()?;
+            let response = get(url).follow_redirects(true).send()?;
 
-            let mut reader = XzDecoder::new(client.get(url)?.into_body());
+            ensure!(
+                response.is_success(),
+                "Failed to download shows: {}",
+                response.status()
+            );
+
+            let mut reader = XzDecoder::new(response.split().2);
 
             parse(&mut reader, &sender)?;
 

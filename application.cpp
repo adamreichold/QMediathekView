@@ -329,7 +329,7 @@ void Application::downloadMirrors(const QString& url, const Consumer& consumer)
             {
                 const auto url = server.firstChildElement(Tags::url).text();
 
-                if (!url.isEmpty())
+                if (url.startsWith("http://"))
                 {
                     mirrors.append(url);
                 }

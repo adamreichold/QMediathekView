@@ -18,7 +18,7 @@ LIBS += $${internals.target} -ldl
 QT += core xml network gui widgets
 
 CONFIG += link_pkgconfig
-PKGCONFIG += sqlite3 libcurl openssl liblzma
+PKGCONFIG += sqlite3 liblzma
 
 TARGET = QMediathekView
 TEMPLATE = app
