@@ -102,7 +102,7 @@ impl Internals {
     fn channels<C: FnMut(StringData)>(&mut self, mut consumer: C) -> Fallible<()> {
         let mut stmt = self
             .conn
-            .prepare("SELECT DISTINCT(channel) FROM channels")?;
+            .prepare_cached("SELECT DISTINCT(channel) FROM channels")?;
 
         let mut rows = stmt.query(NO_PARAMS)?;
 
@@ -114,7 +114,7 @@ impl Internals {
     }
 
     fn topics<C: FnMut(StringData)>(&mut self, channel: &str, mut consumer: C) -> Fallible<()> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare_cached(
             r#"
 SELECT DISTINCT(topic)
 FROM channels, topics
@@ -162,7 +162,7 @@ AND channels.channel LIKE ? || '%'
             ""
         };
 
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             r#"
 SELECT shows.id
 FROM channels, topics, shows, shows_by_title
@@ -189,7 +189,7 @@ ORDER BY shows.topic_id ASC, shows.date DESC, shows.time DESC
     fn fetch<C: FnOnce(ShowData)>(&mut self, id: i64, consumer: C) -> Fallible<()> {
         let trans = self.conn.transaction()?;
 
-        let mut stmt = trans.prepare(
+        let mut stmt = trans.prepare_cached(
             r#"
 SELECT
     channels.channel,

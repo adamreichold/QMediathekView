@@ -23,8 +23,6 @@ pub fn open_connection(path: &Path) -> Fallible<Connection> {
             | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )?;
 
-    conn.set_prepared_statement_cache_capacity(0);
-
     conn.pragma_update(None, "journal_mode", &"WAL")?;
 
     Ok(conn)
@@ -394,7 +392,7 @@ impl BlobFetcher {
             return Ok(());
         }
 
-        let mut stmt = conn.prepare("SELECT blob FROM blobs WHERE id = ?")?;
+        let mut stmt = conn.prepare_cached("SELECT blob FROM blobs WHERE id = ?")?;
         let mut rows = stmt.query(params![blob_id])?;
         let row = rows
             .next()?
