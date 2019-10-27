@@ -46,7 +46,9 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(Settings& settings, Model& model, Application& application, QWidget* parent = 0);
-    ~MainWindow();
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 public:
     void showStartedMirrorsUpdate();

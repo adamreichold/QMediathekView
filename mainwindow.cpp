@@ -227,10 +227,12 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     statusBar()->showMessage(tr("Ready"), messageTimeout);
 }
 
-MainWindow::~MainWindow()
+void MainWindow::closeEvent(QCloseEvent* event)
 {
     m_settings.setMainWindowGeometry(saveGeometry());
     m_settings.setMainWindowState(saveState());
+
+    QMainWindow::closeEvent(event);
 }
 
 void MainWindow::showStartedMirrorsUpdate()
