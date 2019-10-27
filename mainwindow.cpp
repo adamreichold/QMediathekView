@@ -56,8 +56,8 @@ constexpr auto errorMessageTimeout = 10 * 1000;
 
 constexpr auto searchTimeout = 200;
 
-constexpr auto minimumChannelLength = 4;
-constexpr auto minimumTopicLength = 12;
+constexpr auto minimumChannelLength = 10;
+constexpr auto minimumTopicLength = 30;
 
 template< typename Action >
 void forEachSelectedRow(const QAbstractItemView* view, Action action)
@@ -142,6 +142,8 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_titleEdit = new QLineEdit(searchWidget);
     m_titleEdit->setFocus();
     searchLayout->addRow(tr("Title"), m_titleEdit);
+
+    m_tableView->horizontalHeader()->setMaximumSectionSize(qMax(m_channelBox->sizeHint().width(), m_topicBox->sizeHint().width()));
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::timeout);
 
