@@ -106,7 +106,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_tableView->verticalHeader()->setVisible(false);
-    m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
     m_tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
     connect(m_tableView, &QTableView::doubleClicked, this, &MainWindow::doubleClicked);
@@ -145,8 +145,6 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_titleEdit = new QLineEdit(searchWidget);
     m_titleEdit->setFocus();
     searchLayout->addRow(tr("Title"), m_titleEdit);
-
-    m_tableView->horizontalHeader()->setMaximumSectionSize(qMax(m_channelBox->sizeHint().width(), m_topicBox->sizeHint().width()));
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::timeout);
 
@@ -225,6 +223,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
 
     restoreGeometry(m_settings.mainWindowGeometry());
     restoreState(m_settings.mainWindowState());
+    m_tableView->horizontalHeader()->restoreState(m_settings.headerViewState());
 
     setWindowTitle(qApp->applicationName() + QStringLiteral("[*]"));
     statusBar()->showMessage(tr("Ready"), messageTimeout);
@@ -234,6 +233,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     m_settings.setMainWindowGeometry(saveGeometry());
     m_settings.setMainWindowState(saveState());
+    m_settings.setHeaderViewState(m_tableView->horizontalHeader()->saveState());
 
     QMainWindow::closeEvent(event);
 }

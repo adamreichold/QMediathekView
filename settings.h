@@ -86,6 +86,8 @@ public:
     QByteArray mainWindowState() const;
     void setMainWindowState(const QByteArray& state);
 
+    QByteArray headerViewState() const;
+    void setHeaderViewState(const QByteArray& state);
 private:
     QSettings* m_settings;
 

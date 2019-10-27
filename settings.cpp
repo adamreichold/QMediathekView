@@ -57,6 +57,7 @@ DEFINE_KEY(preferredUrl);
 
 DEFINE_KEY(mainWindowGeometry);
 DEFINE_KEY(mainWindowState);
+DEFINE_KEY(headerViewState);
 
 #undef DEFINE_KEY
 
@@ -233,6 +234,16 @@ QByteArray Settings::mainWindowState() const
 void Settings::setMainWindowState(const QByteArray& state)
 {
     m_settings->setValue(Keys::mainWindowState, state);
+}
+
+QByteArray Settings::headerViewState() const
+{
+    return m_settings->value(Keys::headerViewState).toByteArray();
+}
+
+void Settings::setHeaderViewState(const QByteArray& state)
+{
+    m_settings->setValue(Keys::headerViewState, state);
 }
 
 } // QMediathekView
