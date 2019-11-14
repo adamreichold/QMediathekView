@@ -17,13 +17,11 @@ const URL_BLOB_LEN: usize = 512 * 1024;
 pub fn open_connection(path: &Path) -> Fallible<Connection> {
     let conn = Connection::open_with_flags(
         path,
-        OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
-            | OpenFlags::SQLITE_OPEN_PRIVATE_CACHE
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        OpenFlags::default() | OpenFlags::SQLITE_OPEN_PRIVATE_CACHE,
     )?;
 
     conn.pragma_update(None, "journal_mode", &"WAL")?;
+    conn.pragma_update(None, "synchronous", &"NORMAL")?;
 
     Ok(conn)
 }

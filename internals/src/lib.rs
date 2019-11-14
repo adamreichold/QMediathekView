@@ -1,3 +1,4 @@
+#![allow(improper_ctypes)]
 #![allow(clippy::missing_safety_doc)]
 
 mod compressor;
