@@ -349,7 +349,7 @@ pub struct StringData {
 impl From<&[u8]> for StringData {
     fn from(val: &[u8]) -> Self {
         Self {
-            data: val.as_ptr().cast(),
+            data: val.as_ptr() as *const c_char,
             len: val.len(),
         }
     }
@@ -375,7 +375,7 @@ impl From<&str> for StringData {
 
 impl StringData {
     unsafe fn as_str(&self) -> &str {
-        from_utf8(from_raw_parts(self.data.cast(), self.len)).unwrap()
+        from_utf8(from_raw_parts(self.data as *const u8, self.len)).unwrap()
     }
 }
 

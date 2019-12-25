@@ -1,5 +1,6 @@
 use std::io::{Error as IoError, Read};
 use std::num::ParseIntError;
+use std::ptr::copy;
 use std::sync::mpsc::Sender;
 
 use chrono::{NaiveDate, NaiveTime};
@@ -59,8 +60,13 @@ fn fill_buf<R: Read>(buf: &mut Vec<u8>, reader: &mut R) -> Result<bool, Error> {
 }
 
 fn truncate_buf(parsed: usize, buf: &mut Vec<u8>) {
-    buf.copy_within(parsed.., 0);
-    buf.truncate(buf.len() - parsed);
+    let len = buf.len().checked_sub(parsed).unwrap();
+
+    unsafe {
+        copy(buf.as_ptr().add(parsed), buf.as_mut_ptr(), len);
+    }
+
+    buf.truncate(len);
 }
 
 fn parse_header(input: &[u8]) -> Result<Option<usize>, Error> {
@@ -248,19 +254,19 @@ pub enum Error {
 
 impl From<IoError> for Error {
     fn from(err: IoError) -> Self {
-        Self::Io(err)
+        Error::Io(err)
     }
 }
 
 impl From<JsonError> for Error {
     fn from(err: JsonError) -> Self {
-        Self::Json(err)
+        Error::Json(err)
     }
 }
 
 impl From<ParseIntError> for Error {
     fn from(err: ParseIntError) -> Self {
-        Self::ParseInt(err)
+        Error::ParseInt(err)
     }
 }
 
