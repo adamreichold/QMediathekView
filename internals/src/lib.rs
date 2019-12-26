@@ -138,6 +138,8 @@ AND channels.channel LIKE ? || '%'
         channel: &str,
         topic: &str,
         title: &str,
+        sort_column: SortColumn,
+        sort_order: SortOrder,
         mut consumer: C,
     ) -> Fallible<()> {
         let mut params = Vec::new();
@@ -163,6 +165,23 @@ AND channels.channel LIKE ? || '%'
             ""
         };
 
+        let order_by = match (sort_column, sort_order) {
+            (SortColumn::Channel, SortOrder::Ascending) => {
+                "shows.topic_id ASC, shows.date DESC, shows.time DESC"
+            }
+            (SortColumn::Channel, SortOrder::Descending) => {
+                "shows.topic_id DESC, shows.date DESC, shows.time DESC"
+            }
+            (SortColumn::Topic, SortOrder::Ascending) => "topics.topic ASC",
+            (SortColumn::Topic, SortOrder::Descending) => "topics.topic DESC",
+            (SortColumn::Date, SortOrder::Ascending) => "shows.date ASC, shows.time ASC",
+            (SortColumn::Date, SortOrder::Descending) => "shows.date DESC, shows.time DESC",
+            (SortColumn::Time, SortOrder::Ascending) => "shows.time ASC",
+            (SortColumn::Time, SortOrder::Descending) => "shows.time DESC",
+            (SortColumn::Duration, SortOrder::Ascending) => "shows.duration ASC",
+            (SortColumn::Duration, SortOrder::Descending) => "shows.duration DESC",
+        };
+
         let mut stmt = self.conn.prepare_cached(&format!(
             r#"
 SELECT shows.id
@@ -173,9 +192,9 @@ AND shows.id = shows_by_title.rowid
 {}
 {}
 {}
-ORDER BY shows.topic_id ASC, shows.date DESC, shows.time DESC
+ORDER BY {}
 "#,
-            channel_filter, topic_filter, title_filter,
+            channel_filter, topic_filter, title_filter, order_by
         ))?;
 
         let mut rows = stmt.query(&params)?;
@@ -402,18 +421,42 @@ pub unsafe extern "C" fn internals_topics(
     }
 }
 
+#[repr(C)]
+pub enum SortColumn {
+    Channel,
+    Topic,
+    Date,
+    Time,
+    Duration,
+}
+
+#[repr(C)]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn internals_query(
     internals: *mut Internals,
     channel: StringData,
     topic: StringData,
     title: StringData,
+    sort_column: SortColumn,
+    sort_order: SortOrder,
     ids: *mut c_void,
     append: unsafe extern "C" fn(ids: *mut c_void, id: i64),
 ) {
-    if let Err(err) = (*internals).query(channel.as_str(), topic.as_str(), title.as_str(), |id| {
-        append(ids, id);
-    }) {
+    if let Err(err) = (*internals).query(
+        channel.as_str(),
+        topic.as_str(),
+        title.as_str(),
+        sort_column,
+        sort_order,
+        |id| {
+            append(ids, id);
+        },
+    ) {
         eprintln!("Failed to query shows: {}", err);
     }
 }

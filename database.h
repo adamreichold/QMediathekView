@@ -53,7 +53,22 @@ public:
     void partialUpdate(const QString& url);
 
 public:
-    QVector< quintptr > query(const QString& channel, const QString& topic, const QString& title) const;
+    enum SortColumn
+    {
+        SortChannel,
+        SortTopic,
+        SortDate,
+        SortTime,
+        SortDuration
+    };
+
+    enum SortOrder
+    {
+        SortAscending,
+        SortDescending,
+    };
+
+    QVector< quintptr > query(const QString& channel, const QString& topic, const QString& title, SortColumn sortColumn, SortOrder sortOrder) const;
 
 public:
     std::unique_ptr< Show > show(const quintptr id) const;

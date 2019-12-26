@@ -96,6 +96,8 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     setCentralWidget(m_tableView);
 
     m_tableView->setAlternatingRowColors(true);
+    m_tableView->sortByColumn(0, Qt::AscendingOrder);
+    m_tableView->setSortingEnabled(true);
     m_tableView->setTabKeyNavigation(false);
     m_tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -109,6 +111,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
 
     connect(m_tableView, &QTableView::doubleClicked, this, &MainWindow::doubleClicked);
     connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentChanged);
+    connect(m_tableView->horizontalHeader(), &QHeaderView::sortIndicatorChanged, this, &MainWindow::sortIndicatorChanged);
     connect(m_tableView, &QTableView::customContextMenuRequested, this, &MainWindow::customContextMenuRequested);
 
     const auto searchDock = new QDockWidget(tr("Search"), this);
@@ -357,6 +360,11 @@ void MainWindow::currentChanged(const QModelIndex& current, const QModelIndex& /
 {
     m_descriptionEdit->setPlainText(m_model.description(current));
     m_websiteLabel->setText(QStringLiteral("<a href=\"%1\">%1</a>").arg(m_model.website(current)));
+}
+
+void MainWindow::sortIndicatorChanged(int logicalIndex, Qt::SortOrder /* order */)
+{
+    m_tableView->horizontalHeader()->setSortIndicatorShown(logicalIndex != 2);
 }
 
 void MainWindow::customContextMenuRequested(const QPoint& pos)

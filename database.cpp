@@ -74,6 +74,8 @@ extern "C"
         StringData channel,
         StringData topic,
         StringData title,
+        QMediathekView::Database::SortColumn sortColumn,
+        QMediathekView::Database::SortOrder sortOrder,
         void* ids,
         void (*append)(void* ids, std::int64_t id));
 
@@ -216,7 +218,7 @@ void Database::updateCompleted(void* context, const char* error)
     emit self->updated();
 }
 
-QVector< quintptr > Database::query(const QString& channel, const QString& topic, const QString& title) const
+QVector< quintptr > Database::query(const QString& channel, const QString& topic, const QString& title, SortColumn sortColumn, SortOrder sortOrder) const
 {
     QVector< quintptr > ids;
 
@@ -229,6 +231,7 @@ QVector< quintptr > Database::query(const QString& channel, const QString& topic
         internals_query(
             m_internals,
             fromBytes(channel_), fromBytes(topic_), fromBytes(title_),
+            sortColumn, sortOrder,
             &ids, appendId);
     }
 

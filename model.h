@@ -28,11 +28,10 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 class QStringListModel;
 
 #include "schema.h"
+#include "database.h"
 
 namespace QMediathekView
 {
-
-class Database;
 
 class Model : public QAbstractTableModel
 {
@@ -52,6 +51,7 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
 
     void filter(const QString& channel, const QString& topic, const QString& title);
+    void sort(int column, Qt::SortOrder order) override;
 
 protected:
     bool canFetchMore(const QModelIndex& parent) const override;
@@ -80,6 +80,9 @@ private:
     QString m_channel;
     QString m_topic;
     QString m_title;
+
+    Database::SortColumn m_sortColumn = Database::SortColumn::SortChannel;
+    Database::SortOrder m_sortOrder = Database::SortOrder::SortAscending;
 
     QVector< quintptr > m_id;
     int m_fetched = 0;
