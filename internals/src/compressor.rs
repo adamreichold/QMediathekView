@@ -2,12 +2,13 @@ use std::convert::TryInto;
 use std::mem::replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use failure::{bail, ensure, Fallible};
 use rayon_core::spawn;
 use zstd_safe::{
     compress_bound, compress_cctx, create_cctx, create_dctx, decompress_dctx, get_error_name,
     get_frame_content_size, CCtx, DCtx, CONTENTSIZE_ERROR, CONTENTSIZE_UNKNOWN,
 };
+
+use super::Fallible;
 
 const COMPRESSION_LEVEL: i32 = 13;
 
@@ -36,7 +37,10 @@ impl<T: Send + 'static> BackgroundCompressor<T> {
         self.compr.buf.len()
     }
 
-    pub fn rotate<F: FnOnce(T, &[u8]) -> Fallible<()>>(&mut self, tag: T, f: F) -> Fallible<()> {
+    pub fn rotate<F>(&mut self, tag: T, f: F) -> Fallible
+    where
+        F: FnOnce(T, &[u8]) -> Fallible,
+    {
         let done = if let Ok(task) = self.receiver.try_recv() {
             let (tag, mut done) = task?;
             f(tag, &done.compr_buf)?;
@@ -58,7 +62,10 @@ impl<T: Send + 'static> BackgroundCompressor<T> {
         Ok(())
     }
 
-    pub fn finish<F: FnMut(T, &[u8]) -> Fallible<()>>(self, tag: T, mut f: F) -> Fallible<()> {
+    pub fn finish<F>(self, tag: T, mut f: F) -> Fallible
+    where
+        F: FnMut(T, &[u8]) -> Fallible,
+    {
         if !self.compr.buf.is_empty() {
             let mut todo = self.compr;
 
@@ -101,10 +108,9 @@ impl Compressor {
     }
 
     fn push(&mut self, text: &str) -> Fallible<u32> {
-        ensure!(
-            !text.contains('\0'),
-            "Cannot compress text containing nul character"
-        );
+        if text.contains('\0') {
+            return Err("Cannot compress text containing nul character".into());
+        }
 
         let offset: u32 = self.buf.len().try_into().unwrap();
         self.buf.extend_from_slice(text.as_bytes());
@@ -113,7 +119,7 @@ impl Compressor {
         Ok(offset)
     }
 
-    fn compress(&mut self) -> Fallible<()> {
+    fn compress(&mut self) -> Fallible {
         self.compr_buf.resize(compress_bound(self.buf.len()), 0);
 
         match compress_cctx(
@@ -122,11 +128,13 @@ impl Compressor {
             &self.buf,
             COMPRESSION_LEVEL,
         ) {
-            Ok(len) => self.compr_buf.truncate(len),
-            Err(err) => bail!("Zstd compression failed: {}", get_error_name(err)),
-        }
+            Ok(len) => {
+                self.compr_buf.truncate(len);
 
-        Ok(())
+                Ok(())
+            }
+            Err(err) => Err(format!("Zstd compression failed: {}", get_error_name(err)).into()),
+        }
     }
 }
 
@@ -149,15 +157,19 @@ impl Decompressor {
 
     pub fn decompress<'a>(&'a mut self, compr_buf: &[u8]) -> Fallible<&'a [u8]> {
         match get_frame_content_size(compr_buf) {
-            CONTENTSIZE_ERROR | CONTENTSIZE_UNKNOWN => bail!("Cannot determine uncompressed size"),
+            CONTENTSIZE_ERROR | CONTENTSIZE_UNKNOWN => {
+                return Err("Cannot determine uncompressed size".into())
+            }
             len => self.buf.resize(len.try_into().unwrap(), 0),
         }
 
         match decompress_dctx(&mut self.ctx, &mut self.buf, compr_buf) {
-            Ok(len) => self.buf.truncate(len),
-            Err(err) => bail!("Zstd decompression failed: {}", get_error_name(err)),
-        }
+            Ok(len) => {
+                self.buf.truncate(len);
 
-        Ok(&self.buf)
+                Ok(&self.buf)
+            }
+            Err(err) => Err(format!("Zstd decompression failed: {}", get_error_name(err)).into()),
+        }
     }
 }

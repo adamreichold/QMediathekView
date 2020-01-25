@@ -5,6 +5,7 @@ mod compressor;
 mod database;
 mod parser;
 
+use std::error::Error as StdError;
 use std::ffi::{CStr, CString, OsStr};
 use std::os::{
     raw::{c_char, c_void},
@@ -18,12 +19,14 @@ use std::sync::mpsc::{channel, Receiver};
 use std::thread::spawn;
 
 use attohttpc::get;
-use failure::{ensure, format_err, Fallible};
 use rusqlite::{Connection, NO_PARAMS};
 use xz2::read::XzDecoder;
 
 use self::database::{create_schema, full_update, open_connection, partial_update, BlobFetcher};
 use self::parser::{parse, Item};
+
+pub type Error = Box<dyn StdError + Send + Sync>;
+pub type Fallible<T = ()> = Result<T, Error>;
 
 pub struct Internals {
     path: PathBuf,
@@ -51,8 +54,8 @@ impl Internals {
 
     fn start_update<U, C>(&mut self, url: String, updater: U, completion: C)
     where
-        U: 'static + FnOnce(&Connection, &Receiver<Item>) -> Fallible<()> + Send,
-        C: 'static + FnOnce(Fallible<()>) + Send,
+        U: 'static + FnOnce(&Connection, &Receiver<Item>) -> Fallible + Send,
+        C: 'static + FnOnce(Fallible) + Send,
     {
         let path = self.path.clone();
 
@@ -61,20 +64,18 @@ impl Internals {
         });
     }
 
-    fn update<U>(path: &Path, url: String, updater: U) -> Fallible<()>
+    fn update<U>(path: &Path, url: String, updater: U) -> Fallible
     where
-        U: FnOnce(&Connection, &Receiver<Item>) -> Fallible<()>,
+        U: FnOnce(&Connection, &Receiver<Item>) -> Fallible,
     {
         let (sender, receiver) = channel();
 
-        let parser = spawn(move || -> Fallible<()> {
+        let parser = spawn(move || -> Fallible {
             let response = get(url).follow_redirects(true).send()?;
 
-            ensure!(
-                response.is_success(),
-                "Failed to download shows: {}",
-                response.status()
-            );
+            if !response.is_success() {
+                return Err(format!("Failed to download shows: {}", response.status()).into());
+            }
 
             let mut reader = XzDecoder::new(response.split().2);
 
@@ -100,7 +101,7 @@ impl Internals {
         Ok(())
     }
 
-    fn channels<C: FnMut(StringData)>(&mut self, mut consumer: C) -> Fallible<()> {
+    fn channels<C: FnMut(StringData)>(&mut self, mut consumer: C) -> Fallible {
         let mut stmt = self
             .conn
             .prepare_cached("SELECT DISTINCT(channel) FROM channels")?;
@@ -114,7 +115,7 @@ impl Internals {
         Ok(())
     }
 
-    fn topics<C: FnMut(StringData)>(&mut self, channel: &str, mut consumer: C) -> Fallible<()> {
+    fn topics<C: FnMut(StringData)>(&mut self, channel: &str, mut consumer: C) -> Fallible {
         let mut stmt = self.conn.prepare_cached(
             r#"
 SELECT DISTINCT(topic)
@@ -141,7 +142,7 @@ AND channels.channel LIKE ? || '%'
         sort_column: SortColumn,
         sort_order: SortOrder,
         mut consumer: C,
-    ) -> Fallible<()> {
+    ) -> Fallible {
         let mut params = Vec::new();
 
         let channel_filter = if !channel.is_empty() {
@@ -206,7 +207,7 @@ ORDER BY {}
         Ok(())
     }
 
-    fn fetch<C: FnOnce(ShowData)>(&mut self, id: i64, consumer: C) -> Fallible<()> {
+    fn fetch<C: FnOnce(ShowData)>(&mut self, id: i64, consumer: C) -> Fallible {
         let trans = self.conn.transaction()?;
 
         let mut stmt = trans.prepare_cached(
@@ -235,7 +236,7 @@ AND shows.id = ?
         let mut rows = stmt.query(&[&id])?;
         let row = rows
             .next()?
-            .ok_or_else(|| format_err!("No show with ID {}", id))?;
+            .ok_or_else(|| Error::from(format!("No show with ID {}", id)))?;
 
         let channel = row.get_raw(0).as_str()?;
         let topic = row.get_raw(1).as_str()?;
@@ -323,7 +324,7 @@ pub struct Completion {
 unsafe impl Send for Completion {}
 
 impl Completion {
-    unsafe fn call(self, res: Fallible<()>) {
+    unsafe fn call(self, res: Fallible) {
         let err = match res {
             Ok(()) => None,
             Err(err) => Some(CString::new(err.to_string()).unwrap()),

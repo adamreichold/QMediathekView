@@ -4,12 +4,14 @@ use std::path::Path;
 use std::sync::mpsc::Receiver;
 
 use chrono::{NaiveDate, Timelike};
-use failure::{format_err, Fallible};
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Statement, NO_PARAMS};
 use twoway::find_bytes;
 
-use super::compressor::{BackgroundCompressor, Decompressor};
-use super::parser::Item;
+use super::{
+    compressor::{BackgroundCompressor, Decompressor},
+    parser::Item,
+    Error, Fallible,
+};
 
 const TEXT_BLOB_LEN: usize = 256 * 1024;
 const URL_BLOB_LEN: usize = 512 * 1024;
@@ -394,7 +396,7 @@ impl BlobFetcher {
         let mut rows = stmt.query(params![blob_id])?;
         let row = rows
             .next()?
-            .ok_or_else(|| format_err!("No BLOB with ID {}", blob_id))?;
+            .ok_or_else(|| Error::from(format!("No BLOB with ID {}", blob_id)))?;
 
         let blob = row.get_raw(0).as_blob()?;
 
