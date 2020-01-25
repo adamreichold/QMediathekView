@@ -8,8 +8,8 @@ edition = "2018"
 crate-type = ["staticlib"]
 
 [dependencies]
-attohttpc = { version = "0.6", default-features = false }
 chrono = { version = "0.4", default-features = false }
+curl = { version = "0.4", default-features = false, features = ["static-curl"] }
 rayon-core = "1.6"
 rusqlite = { version = "0.21", features = ["bundled"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }

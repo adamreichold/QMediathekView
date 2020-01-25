@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::Write;
 use std::ptr::copy;
 use std::sync::mpsc::Sender;
 
@@ -6,6 +6,7 @@ use chrono::{NaiveDate, NaiveTime};
 use serde::Deserialize;
 use serde_json::{from_slice, from_str, value::RawValue};
 use twoway::find_bytes;
+use xz2::write::XzDecoder;
 
 use super::{Error, Fallible};
 
@@ -23,50 +24,74 @@ pub struct Item {
     pub url_large: Option<String>,
 }
 
-pub fn parse<R: Read>(reader: &mut R, sender: &Sender<Item>) -> Fallible {
-    let mut buf = Vec::new();
+pub struct Parser {
+    sender: Sender<Item>,
+    decoder: XzDecoder<Vec<u8>>,
+    pos: usize,
+    parsed_header: bool,
+}
 
-    loop {
-        if let Some(parsed) = parse_header(&buf)? {
-            truncate_buf(parsed, &mut buf);
-            break;
-        } else if !fill_buf(&mut buf, reader)? {
-            return Err("Unexpected end of input".into());
+impl Parser {
+    pub fn new(sender: Sender<Item>) -> Self {
+        Self {
+            sender,
+            decoder: XzDecoder::new(Vec::new()),
+            pos: 0,
+            parsed_header: false,
         }
     }
 
-    loop {
-        if let Some((parsed, item)) = parse_item(&buf)? {
-            sender.send(item)?;
-            truncate_buf(parsed, &mut buf);
-            continue;
-        } else if !fill_buf(&mut buf, reader)? {
-            let item = parse_last_item(&buf)?;
-            sender.send(item)?;
-            break;
+    pub fn parse(&mut self, data: &[u8]) -> Fallible {
+        shift_data(self.decoder.get_mut(), &mut self.pos);
+        self.decoder.write_all(data)?;
+
+        let buf = self.decoder.get_ref();
+
+        if !self.parsed_header {
+            match parse_header(buf)? {
+                Some(parsed) => {
+                    self.pos += parsed;
+                    self.parsed_header = true;
+                }
+                None => return Ok(()),
+            }
+        }
+
+        loop {
+            match parse_item(&buf[self.pos..])? {
+                Some((parsed, item)) => {
+                    self.pos += parsed;
+                    self.sender.send(item)?;
+                }
+                None => return Ok(()),
+            }
         }
     }
 
-    Ok(())
+    pub fn finish(mut self) -> Fallible {
+        let buf = self.decoder.finish()?;
+
+        while let Some((parsed, item)) = parse_item(&buf[self.pos..])? {
+            self.pos += parsed;
+            self.sender.send(item)?;
+        }
+
+        let item = parse_last_item(&buf[self.pos..])?;
+        self.sender.send(item)?;
+
+        Ok(())
+    }
 }
 
-fn fill_buf<R: Read>(buf: &mut Vec<u8>, reader: &mut R) -> Fallible<bool> {
-    let len = buf.len();
-    buf.resize(len + 512, 0);
-    let read = reader.read(&mut buf[len..])?;
-    buf.truncate(len + read);
-
-    Ok(read != 0)
-}
-
-fn truncate_buf(parsed: usize, buf: &mut Vec<u8>) {
-    let len = buf.len().checked_sub(parsed).unwrap();
+fn shift_data(buf: &mut Vec<u8>, pos: &mut usize) {
+    let len = buf.len().checked_sub(*pos).unwrap();
 
     unsafe {
-        copy(buf.as_ptr().add(parsed), buf.as_mut_ptr(), len);
+        copy(buf.as_ptr().add(*pos), buf.as_mut_ptr(), len);
     }
 
     buf.truncate(len);
+    *pos = 0;
 }
 
 fn parse_header(input: &[u8]) -> Fallible<Option<usize>> {

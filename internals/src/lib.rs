@@ -18,12 +18,11 @@ use std::str::from_utf8;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread::spawn;
 
-use attohttpc::get;
+use curl::easy::Easy;
 use rusqlite::{Connection, NO_PARAMS};
-use xz2::read::XzDecoder;
 
 use self::database::{create_schema, full_update, open_connection, partial_update, BlobFetcher};
-use self::parser::{parse, Item};
+use self::parser::{Item, Parser};
 
 pub type Error = Box<dyn StdError + Send + Sync>;
 pub type Fallible<T = ()> = Result<T, Error>;
@@ -71,15 +70,16 @@ impl Internals {
         let (sender, receiver) = channel();
 
         let parser = spawn(move || -> Fallible {
-            let response = get(url).follow_redirects(true).send()?;
+            let mut parser = Parser::new(sender);
 
-            if !response.is_success() {
-                return Err(format!("Failed to download shows: {}", response.status()).into());
-            }
+            let mut handle = Easy::new();
+            handle.url(&url)?;
+            handle.follow_location(true)?;
+            handle.fail_on_error(true)?;
 
-            let mut reader = XzDecoder::new(response.split().2);
+            transfer(&mut handle, |data| parser.parse(data))?;
 
-            parse(&mut reader, &sender)?;
+            parser.finish()?;
 
             Ok(())
         });
@@ -285,6 +285,33 @@ AND shows.id = ?
     }
 }
 
+fn transfer<F>(handle: &mut Easy, mut f: F) -> Fallible
+where
+    F: FnMut(&[u8]) -> Fallible,
+{
+    let mut write_error = None;
+    let perform_result = {
+        let mut transfer = handle.transfer();
+
+        transfer.write_function(|data| match f(data) {
+            Ok(()) => Ok(data.len()),
+            Err(err) => {
+                write_error = Some(err);
+                Ok(0)
+            }
+        })?;
+
+        transfer.perform()
+    };
+
+    if let Err(err) = perform_result {
+        if err.is_write_error() {
+            return Err(write_error.unwrap());
+        }
+    }
+
+    Ok(())
+}
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct NeedsUpdate {

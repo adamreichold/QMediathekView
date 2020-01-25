@@ -13,7 +13,7 @@ CONFIG(release, debug|release) {
 internals.CONFIG = phony
 QMAKE_EXTRA_TARGETS += internals
 PRE_TARGETDEPS += $${internals.target}
-LIBS += $${internals.target} -ldl
+LIBS += $${internals.target} -ldl -lz
 
 QT += core xml network gui widgets
 
