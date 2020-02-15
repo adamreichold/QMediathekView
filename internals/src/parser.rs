@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::ptr::copy;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
 
 use chrono::{NaiveDate, NaiveTime};
 use serde::Deserialize;
@@ -25,14 +25,14 @@ pub struct Item {
 }
 
 pub struct Parser {
-    sender: Sender<Item>,
+    sender: SyncSender<Item>,
     decoder: XzDecoder<Vec<u8>>,
     pos: usize,
     parsed_header: bool,
 }
 
 impl Parser {
-    pub fn new(sender: Sender<Item>) -> Self {
+    pub fn new(sender: SyncSender<Item>) -> Self {
         Self {
             sender,
             decoder: XzDecoder::new(Vec::new()),

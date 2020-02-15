@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use std::slice::from_raw_parts;
 use std::str::from_utf8;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{sync_channel, Receiver};
 use std::thread::spawn;
 
 use curl::easy::Easy;
@@ -67,7 +67,7 @@ impl Internals {
     where
         U: FnOnce(&Connection, &Receiver<Item>) -> Fallible,
     {
-        let (sender, receiver) = channel();
+        let (sender, receiver) = sync_channel(128);
 
         let parser = spawn(move || -> Fallible {
             let mut parser = Parser::new(sender);
