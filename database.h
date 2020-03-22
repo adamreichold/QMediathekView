@@ -81,7 +81,6 @@ private:
 
     Internals* m_internals;
 
-    static void needsUpdate(void* context);
     static void updateCompleted(void* context, const char* error);
 
 };

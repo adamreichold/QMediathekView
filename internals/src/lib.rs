@@ -27,6 +27,21 @@ use self::parser::{Item, Parser};
 pub type Error = Box<dyn StdError + Send + Sync>;
 pub type Fallible<T = ()> = Result<T, Error>;
 
+#[repr(C)]
+pub enum SortColumn {
+    Channel,
+    Topic,
+    Date,
+    Time,
+    Duration,
+}
+
+#[repr(C)]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
 pub struct Internals {
     path: PathBuf,
     conn: Connection,
@@ -35,12 +50,12 @@ pub struct Internals {
 }
 
 impl Internals {
-    fn init<P: AsRef<Path>, N: FnOnce()>(path: P, needs_update: N) -> Fallible<Self> {
+    fn init<P: AsRef<Path>>(path: P, needs_update: &mut bool) -> Fallible<Self> {
         let path = path.as_ref().join("database");
         let (conn, was_reset) = create_schema(&path)?;
 
         if was_reset {
-            needs_update();
+            *needs_update = true;
         }
 
         Ok(Self {
@@ -312,21 +327,79 @@ where
 
     Ok(())
 }
+
+extern "C" {
+    fn append_integer(ids: *mut c_void, data: i64);
+    fn append_string(strings: *mut c_void, data: StringData);
+    fn fetch_show(show: *mut c_void, data: *const ShowData);
+}
+
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct NeedsUpdate {
-    context: *mut c_void,
-    action: unsafe extern "C" fn(context: *mut c_void),
+pub struct StringData {
+    ptr: *const c_char,
+    len: usize,
+}
+
+impl Default for StringData {
+    fn default() -> Self {
+        Self {
+            ptr: null(),
+            len: 0,
+        }
+    }
+}
+
+impl From<&[u8]> for StringData {
+    fn from(val: &[u8]) -> Self {
+        Self {
+            ptr: val.as_ptr() as *const c_char,
+            len: val.len(),
+        }
+    }
+}
+
+impl From<Option<&[u8]>> for StringData {
+    fn from(val: Option<&[u8]>) -> Self {
+        val.map(Into::into).unwrap_or_default()
+    }
+}
+
+impl From<&str> for StringData {
+    fn from(val: &str) -> Self {
+        val.as_bytes().into()
+    }
+}
+
+impl StringData {
+    unsafe fn as_str(&self) -> &str {
+        from_utf8(from_raw_parts(self.ptr as *const u8, self.len)).unwrap()
+    }
+}
+
+#[repr(C)]
+pub struct ShowData {
+    channel: StringData,
+    topic: StringData,
+    title: StringData,
+    date: i64,
+    time: u32,
+    duration: u32,
+    description: StringData,
+    website: StringData,
+    url: StringData,
+    url_small: StringData,
+    url_large: StringData,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn internals_init(
     path: *const c_char,
-    needs_update: NeedsUpdate,
+    needs_update: *mut bool,
 ) -> *mut Internals {
     let path = OsStr::from_bytes(CStr::from_ptr(path).to_bytes());
 
-    match Internals::init(path, || (needs_update.action)(needs_update.context)) {
+    match Internals::init(path, &mut *needs_update) {
         Ok(internals) => Box::into_raw(Box::new(internals)),
         Err(err) => {
             eprintln!("Failed to initialize internals: {}", err);
@@ -386,53 +459,9 @@ pub unsafe extern "C" fn internals_partial_update(
     (*internals).start_update(url, partial_update, move |res| completion.call(res));
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct StringData {
-    data: *const c_char,
-    len: usize,
-}
-
-impl From<&[u8]> for StringData {
-    fn from(val: &[u8]) -> Self {
-        Self {
-            data: val.as_ptr() as *const c_char,
-            len: val.len(),
-        }
-    }
-}
-
-impl From<Option<&[u8]>> for StringData {
-    fn from(val: Option<&[u8]>) -> Self {
-        match val {
-            Some(val) => val.into(),
-            None => Self {
-                data: null(),
-                len: 0,
-            },
-        }
-    }
-}
-
-impl From<&str> for StringData {
-    fn from(val: &str) -> Self {
-        val.as_bytes().into()
-    }
-}
-
-impl StringData {
-    unsafe fn as_str(&self) -> &str {
-        from_utf8(from_raw_parts(self.data as *const u8, self.len)).unwrap()
-    }
-}
-
 #[no_mangle]
-pub unsafe extern "C" fn internals_channels(
-    internals: *mut Internals,
-    channels: *mut c_void,
-    append: unsafe extern "C" fn(channels: *mut c_void, channel: StringData),
-) {
-    if let Err(err) = (*internals).channels(|channel| append(channels, channel)) {
+pub unsafe extern "C" fn internals_channels(internals: *mut Internals, channels: *mut c_void) {
+    if let Err(err) = (*internals).channels(|channel| append_string(channels, channel)) {
         eprintln!("Failed to fetch channels: {}", err);
     }
 }
@@ -442,26 +471,10 @@ pub unsafe extern "C" fn internals_topics(
     internals: *mut Internals,
     channel: StringData,
     topics: *mut c_void,
-    append: unsafe extern "C" fn(topics: *mut c_void, topic: StringData),
 ) {
-    if let Err(err) = (*internals).topics(channel.as_str(), |topic| append(topics, topic)) {
+    if let Err(err) = (*internals).topics(channel.as_str(), |topic| append_string(topics, topic)) {
         eprintln!("Failed to fetch topics: {}", err);
     }
-}
-
-#[repr(C)]
-pub enum SortColumn {
-    Channel,
-    Topic,
-    Date,
-    Time,
-    Duration,
-}
-
-#[repr(C)]
-pub enum SortOrder {
-    Ascending,
-    Descending,
 }
 
 #[no_mangle]
@@ -473,7 +486,6 @@ pub unsafe extern "C" fn internals_query(
     sort_column: SortColumn,
     sort_order: SortOrder,
     ids: *mut c_void,
-    append: unsafe extern "C" fn(ids: *mut c_void, id: i64),
 ) {
     if let Err(err) = (*internals).query(
         channel.as_str(),
@@ -482,37 +494,17 @@ pub unsafe extern "C" fn internals_query(
         sort_column,
         sort_order,
         |id| {
-            append(ids, id);
+            append_integer(ids, id);
         },
     ) {
         eprintln!("Failed to query shows: {}", err);
     }
 }
 
-#[repr(C)]
-pub struct ShowData {
-    channel: StringData,
-    topic: StringData,
-    title: StringData,
-    date: i64,
-    time: u32,
-    duration: u32,
-    description: StringData,
-    website: StringData,
-    url: StringData,
-    url_small: StringData,
-    url_large: StringData,
-}
-
 #[no_mangle]
-pub unsafe extern "C" fn internals_fetch(
-    internals: *mut Internals,
-    id: i64,
-    show: *mut c_void,
-    fetch: unsafe extern "C" fn(show: *mut c_void, data: ShowData),
-) {
+pub unsafe extern "C" fn internals_fetch(internals: *mut Internals, id: i64, show: *mut c_void) {
     if let Err(err) = (*internals).fetch(id, |data| {
-        fetch(show, data);
+        fetch_show(show, &data);
     }) {
         eprintln!("Failed to fetch show: {}", err);
     }
