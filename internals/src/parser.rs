@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::ptr::copy;
 use std::sync::mpsc::SyncSender;
 
 use chrono::{NaiveDate, NaiveTime};
@@ -84,13 +83,8 @@ impl Parser {
 }
 
 fn shift_data(buf: &mut Vec<u8>, pos: &mut usize) {
-    let len = buf.len().checked_sub(*pos).unwrap();
-
-    unsafe {
-        copy(buf.as_ptr().add(*pos), buf.as_mut_ptr(), len);
-    }
-
-    buf.truncate(len);
+    buf.copy_within(*pos.., 0);
+    buf.truncate(buf.len() - *pos);
     *pos = 0;
 }
 

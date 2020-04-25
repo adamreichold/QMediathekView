@@ -353,7 +353,7 @@ impl Default for StringData {
 impl From<&[u8]> for StringData {
     fn from(val: &[u8]) -> Self {
         Self {
-            ptr: val.as_ptr() as *const c_char,
+            ptr: val.as_ptr().cast(),
             len: val.len(),
         }
     }
@@ -373,7 +373,7 @@ impl From<&str> for StringData {
 
 impl StringData {
     unsafe fn as_str(&self) -> &str {
-        from_utf8(from_raw_parts(self.ptr as *const u8, self.len)).unwrap()
+        from_utf8(from_raw_parts(self.ptr.cast(), self.len)).unwrap()
     }
 }
 
