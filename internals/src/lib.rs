@@ -18,11 +18,12 @@ use std::str::from_utf8;
 use std::sync::mpsc::{sync_channel, Receiver};
 use std::thread::spawn;
 
-use curl::easy::Easy;
 use rusqlite::{Connection, NO_PARAMS};
+use xz2::bufread::XzDecoder;
+use zeptohttpc::{http::Request, RequestBuilderExt, RequestExt};
 
 use self::database::{create_schema, full_update, open_connection, partial_update, BlobFetcher};
-use self::parser::{Item, Parser};
+use self::parser::{parse, Item};
 
 pub type Error = Box<dyn StdError + Send + Sync>;
 pub type Fallible<T = ()> = Result<T, Error>;
@@ -85,18 +86,13 @@ impl Internals {
         let (sender, receiver) = sync_channel(128);
 
         let parser = spawn(move || -> Fallible {
-            let mut parser = Parser::new(sender);
+            let resp = Request::get(url).empty()?.send()?;
 
-            let mut handle = Easy::new();
-            handle.url(&url)?;
-            handle.follow_location(true)?;
-            handle.fail_on_error(true)?;
+            if !resp.status().is_success() {
+                return Err(format!("Failed to download update: {}", resp.status()).into());
+            }
 
-            transfer(&mut handle, |data| parser.parse(data))?;
-
-            parser.finish()?;
-
-            Ok(())
+            parse(&mut XzDecoder::new(resp.into_body()), sender)
         });
 
         let mut conn = open_connection(&path)?;
@@ -298,34 +294,6 @@ AND shows.id = ?
 
         Ok(())
     }
-}
-
-fn transfer<F>(handle: &mut Easy, mut f: F) -> Fallible
-where
-    F: FnMut(&[u8]) -> Fallible,
-{
-    let mut write_error = None;
-    let perform_result = {
-        let mut transfer = handle.transfer();
-
-        transfer.write_function(|data| match f(data) {
-            Ok(()) => Ok(data.len()),
-            Err(err) => {
-                write_error = Some(err);
-                Ok(0)
-            }
-        })?;
-
-        transfer.perform()
-    };
-
-    if let Err(err) = perform_result {
-        if err.is_write_error() {
-            return Err(write_error.unwrap());
-        }
-    }
-
-    Ok(())
 }
 
 extern "C" {
