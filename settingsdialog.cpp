@@ -43,13 +43,6 @@ SettingsDialog::SettingsDialog(
     auto layout = new QFormLayout(this);
     setLayout(layout);
 
-    m_mirrorsUpdateAfterDaysBox = new QSpinBox(this);
-    m_mirrorsUpdateAfterDaysBox->setValue(m_settings.mirrorsUpdateAfterDays());
-    m_mirrorsUpdateAfterDaysBox->setRange(3, 30);
-    m_mirrorsUpdateAfterDaysBox->setPrefix(tr("after "));
-    m_mirrorsUpdateAfterDaysBox->setSuffix(tr(" days"));
-    layout->addRow(tr("Mirrors update"), m_mirrorsUpdateAfterDaysBox);
-
     m_databaseUpdateAfterHoursBox = new QSpinBox(this);
     m_databaseUpdateAfterHoursBox->setValue(m_settings.databaseUpdateAfterHours());
     m_databaseUpdateAfterHoursBox->setRange(3, 30);
@@ -92,7 +85,6 @@ void SettingsDialog::accept()
 {
     QDialog::accept();
 
-    m_settings.setMirrorsUpdateAfterDays(m_mirrorsUpdateAfterDaysBox->value());
     m_settings.setDatabaseUpdateAfterHours(m_databaseUpdateAfterHoursBox->value());
 
     m_settings.setPlayCommand(m_playCommandEdit->text());

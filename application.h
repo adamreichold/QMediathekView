@@ -44,10 +44,6 @@ public:
     ~Application();
 
 signals:
-    void startedMirrorsUpdate();
-    void completedMirrorsUpdate();
-    void failedToUpdateMirrors(const QString& error);
-
     void startedDatabaseUpdate();
     void completedDatabaseUpdate();
     void failedToUpdateDatabase(const QString& error);
@@ -65,10 +61,7 @@ public:
     void downloadSmall(const QModelIndex& index) const;
     void downloadLarge(const QModelIndex& index) const;
 
-    void checkUpdateMirrors();
     void checkUpdateDatabase();
-
-    void updateMirrors();
     void updateDatabase();
 
     QString preferredUrl(const QModelIndex& index) const;
@@ -76,9 +69,6 @@ public:
 private:
     void startPlay(const QString& url) const;
     void startDownload(const QString& title, const QString& url) const;
-
-    template< typename Consumer >
-    void downloadMirrors(const QString& url, const Consumer& consumer);
 
 private:
     Settings* m_settings;

@@ -67,10 +67,9 @@ namespace Defaults
 
 const auto userAgent = QStringLiteral("QMediathekView");
 
-const auto fullListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/akt.xml");
-const auto partialListUrl = QStringLiteral("http://zdfmediathk.sourceforge.net/diff.xml");
+const auto fullListUrl = QStringLiteral("https://liste.mediathekview.de/Filmliste-akt.xz");
+const auto partialListUrl = QStringLiteral("https://liste.mediathekview.de/Filmliste-diff.xz");
 
-constexpr auto mirrorListUpdateAfterDays = 3;
 constexpr auto databaseUpdateAfterHours = 3;
 
 const auto playCommand = QStringLiteral("vlc %1");
@@ -105,36 +104,6 @@ QString Settings::partialListUrl() const
     return m_settings->value(Keys::partialListUrl, Defaults::partialListUrl).toString();
 }
 
-QStringList Settings::fullListMirrors() const
-{
-    return m_settings->value(Keys::fullListMirrors).toStringList();
-}
-
-void Settings::setFullListMirrors(const QStringList& mirrors)
-{
-    m_settings->setValue(Keys::fullListMirrors, mirrors);
-}
-
-QStringList Settings::partialListMirrors() const
-{
-    return m_settings->value(Keys::partialListMirrors).toStringList();
-}
-
-void Settings::setPartialListMirrors(const QStringList& mirrors)
-{
-    m_settings->setValue(Keys::partialListMirrors, mirrors);
-}
-
-int Settings::mirrorsUpdateAfterDays() const
-{
-    return m_settings->value(Keys::mirrorsUpdateAfterDays, Defaults::mirrorListUpdateAfterDays).toInt();
-}
-
-void Settings::setMirrorsUpdateAfterDays(int days)
-{
-    m_settings->setValue(Keys::mirrorsUpdateAfterDays, days);
-}
-
 int Settings::databaseUpdateAfterHours() const
 {
     return m_settings->value(Keys::databaseUpdateAfterHours, Defaults::databaseUpdateAfterHours).toInt();
@@ -143,21 +112,6 @@ int Settings::databaseUpdateAfterHours() const
 void Settings::setDatabaseUpdateAfterHours(int hours)
 {
     m_settings->setValue(Keys::databaseUpdateAfterHours, hours);
-}
-
-QDateTime Settings::mirrorsUpdatedOn() const
-{
-    return m_settings->value(Keys::mirrorsUpdatedOn).toDateTime();
-}
-
-void Settings::setMirrorsUpdatedOn()
-{
-    m_settings->setValue(Keys::mirrorsUpdatedOn, QDateTime::currentDateTime());
-}
-
-void Settings::resetMirrorsUpdatedOn()
-{
-    m_settings->remove(Keys::mirrorsUpdatedOn);
 }
 
 QDateTime Settings::databaseUpdatedOn() const

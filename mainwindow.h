@@ -51,10 +51,6 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 public:
-    void showStartedMirrorsUpdate();
-    void showCompletedMirrorsUpdate();
-    void showMirrorsUpdateFailure(const QString& error);
-
     void showStartedDatabaseUpdate();
     void showCompletedDatabaseUpdate();
     void showDatabaseUpdateFailure(const QString& error);

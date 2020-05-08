@@ -1,2 +1,3 @@
-internals/target
-QMediathekView.pro.user
+/build/
+/internals/target/
+/QMediathekView.pro.user

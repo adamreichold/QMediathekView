@@ -48,21 +48,8 @@ public:
     QString fullListUrl() const;
     QString partialListUrl() const;
 
-    QStringList fullListMirrors() const;
-    void setFullListMirrors(const QStringList& mirrors);
-
-    QStringList partialListMirrors() const;
-    void setPartialListMirrors(const QStringList& mirrors);
-
-    int mirrorsUpdateAfterDays() const;
-    void setMirrorsUpdateAfterDays(int days);
-
     int databaseUpdateAfterHours() const;
     void setDatabaseUpdateAfterHours(int hours);
-
-    QDateTime mirrorsUpdatedOn() const;
-    void setMirrorsUpdatedOn();
-    void resetMirrorsUpdatedOn();
 
     QDateTime databaseUpdatedOn() const;
     void setDatabaseUpdatedOn();

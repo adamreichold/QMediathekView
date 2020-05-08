@@ -21,11 +21,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "application.h"
 
-#include <memory>
-#include <random>
-
 #include <QDesktopServices>
-#include <QDomDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -48,24 +44,6 @@ namespace
 
 const auto projectName = QStringLiteral("QMediathekView");
 
-namespace Tags
-{
-
-const auto root = QStringLiteral("Mediathek");
-const auto server = QStringLiteral("Server");
-const auto url = QStringLiteral("URL");
-
-} // Tags
-
-QString randomItem(const QStringList& list)
-{
-    std::random_device device;
-    std::default_random_engine generator(device());
-    std::uniform_int_distribution<> distribution(0, list.size() - 1);
-
-    return list.at(distribution(generator));
-}
-
 } // anonymous
 
 Application::Application(int& argc, char** argv)
@@ -83,10 +61,6 @@ Application::Application(int& argc, char** argv)
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
     connect(m_database, &Database::failedToUpdate, this, &Application::failedToUpdateDatabase);
 
-    connect(this, &Application::startedMirrorsUpdate, m_mainWindow, &MainWindow::showStartedMirrorsUpdate);
-    connect(this, &Application::completedMirrorsUpdate, m_mainWindow, &MainWindow::showCompletedMirrorsUpdate);
-    connect(this, &Application::failedToUpdateMirrors, m_mainWindow, &MainWindow::showMirrorsUpdateFailure);
-
     connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
     connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
     connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
@@ -96,7 +70,7 @@ Application::~Application() = default;
 
 int Application::exec()
 {
-    QTimer::singleShot(0, this, &Application::checkUpdateMirrors);
+    QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
 
     m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
     m_mainWindow->show();
@@ -144,22 +118,6 @@ void Application::downloadLarge(const QModelIndex& index) const
     startDownload(m_model->title(index), m_model->urlLarge(index));
 }
 
-void Application::checkUpdateMirrors()
-{
-    const auto updateAfter = m_settings->mirrorsUpdateAfterDays();
-    const auto updatedOn = m_settings->mirrorsUpdatedOn();
-    const auto updatedBefore = updatedOn.daysTo(QDateTime::currentDateTime());
-
-    if (!updatedOn.isValid() || updateAfter < updatedBefore)
-    {
-        updateMirrors();
-    }
-    else
-    {
-        checkUpdateDatabase();
-    }
-}
-
 void Application::checkUpdateDatabase()
 {
     const auto updateAfter = m_settings->databaseUpdateAfterHours();
@@ -172,26 +130,6 @@ void Application::checkUpdateDatabase()
     }
 }
 
-void Application::updateMirrors()
-{
-    emit startedMirrorsUpdate();
-
-    downloadMirrors(m_settings->fullListUrl(), [this](const QStringList& mirrors)
-    {
-        m_settings->setFullListMirrors(mirrors);
-
-        downloadMirrors(m_settings->partialListUrl(), [this](const QStringList& mirrors)
-        {
-            m_settings->setPartialListMirrors(mirrors);
-            m_settings->setMirrorsUpdatedOn();
-
-            emit completedMirrorsUpdate();
-
-            QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
-        });
-    });
-}
-
 void Application::updateDatabase()
 {
     emit startedDatabaseUpdate();
@@ -201,15 +139,11 @@ void Application::updateDatabase()
 
     if (!updatedOn.isValid() || updatedOn < fullUpdateOn)
     {
-        const auto url = randomItem(m_settings->fullListMirrors());
-
-        m_database->fullUpdate(url);
+        m_database->fullUpdate(m_settings->fullListUrl());
     }
     else
     {
-        const auto url = randomItem(m_settings->partialListMirrors());
-
-        m_database->partialUpdate(url);
+        m_database->partialUpdate(m_settings->partialListUrl());
     }
 }
 
@@ -288,62 +222,6 @@ void Application::startDownload(const QString& title, const QString& url) const
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
     }
-}
-
-template< typename Consumer >
-void Application::downloadMirrors(const QString& url, const Consumer& consumer)
-{
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, m_settings->userAgent());
-
-    const auto reply = m_networkManager->get(request);
-
-    connect(reply, &QNetworkReply::finished, [this, consumer, reply]()
-    {
-        reply->deleteLater();
-
-        if (reply->error())
-        {
-            emit failedToUpdateMirrors(reply->errorString());
-            return;
-        }
-
-        QStringList mirrors;
-
-        {
-            QDomDocument document;
-            document.setContent(reply);
-
-            const auto root = document.documentElement();
-            if (root.tagName() != Tags::root)
-            {
-                emit failedToUpdateMirrors(tr("Received a malformed mirror list."));
-                return;
-            }
-
-            auto server = root.firstChildElement(Tags::server);
-
-            while (!server.isNull())
-            {
-                const auto url = server.firstChildElement(Tags::url).text();
-
-                if (url.startsWith("http://"))
-                {
-                    mirrors.append(url);
-                }
-
-                server = server.nextSiblingElement(Tags::server);
-            }
-        }
-
-        if (mirrors.isEmpty())
-        {
-            emit failedToUpdateMirrors(tr("Received an empty mirror list."));
-            return;
-        }
-
-        consumer(mirrors);
-    });
 }
 
 } // QMediathekView

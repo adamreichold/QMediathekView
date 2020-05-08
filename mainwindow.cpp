@@ -238,21 +238,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
     QMainWindow::closeEvent(event);
 }
 
-void MainWindow::showStartedMirrorsUpdate()
-{
-    statusBar()->showMessage(tr("Started mirror list update..."), messageTimeout);
-}
-
-void MainWindow::showCompletedMirrorsUpdate()
-{
-    statusBar()->showMessage(tr("Successfully updated mirror list."), messageTimeout);
-}
-
-void MainWindow::showMirrorsUpdateFailure(const QString& error)
-{
-    statusBar()->showMessage(tr("Failed to updated mirror list: %1").arg(error), errorMessageTimeout);
-}
-
 void MainWindow::showStartedDatabaseUpdate()
 {
     setWindowModified(true);
@@ -268,7 +253,7 @@ void MainWindow::showCompletedDatabaseUpdate()
 void MainWindow::showDatabaseUpdateFailure(const QString& error)
 {
     setWindowModified(false);
-    statusBar()->showMessage(tr("Failed to updated database: %1").arg(error), errorMessageTimeout);
+    statusBar()->showMessage(tr("Failed to update database: %1").arg(error), errorMessageTimeout);
 }
 
 void MainWindow::resetFilterPressed()
