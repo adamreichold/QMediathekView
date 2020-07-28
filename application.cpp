@@ -27,6 +27,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include <QNetworkRequest>
 #include <QMessageBox>
 #include <QProcess>
+#include <QProxyStyle>
 #include <QTimer>
 #include <QUrl>
 
@@ -44,6 +45,20 @@ namespace
 
 const auto projectName = QStringLiteral("QMediathekView");
 
+class ProxyStyle : public QProxyStyle
+{
+public:
+    int styleHint(StyleHint hint, const QStyleOption* option, const QWidget* widget, QStyleHintReturn* returnData) const override
+    {
+        if (hint == QStyle::SH_ItemView_ActivateItemOnSingleClick)
+        {
+            return 0;
+        }
+
+        return QProxyStyle::styleHint(hint, option, widget, returnData);
+    }
+};
+
 } // anonymous
 
 Application::Application(int& argc, char** argv)
@@ -54,7 +69,8 @@ Application::Application(int& argc, char** argv)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_mainWindow(new MainWindow(*m_settings, *m_model, *this))
 {
-    QGuiApplication::setWindowIcon(QIcon::fromTheme(projectName));
+    setWindowIcon(QIcon::fromTheme(projectName));
+    setStyle(new ProxyStyle);
 
     connect(m_database, &Database::updated, m_model, &Model::update);
 

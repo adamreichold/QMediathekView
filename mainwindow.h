@@ -71,7 +71,7 @@ private:
     void downloadLargeTriggered();
 
     void timeout();
-    void doubleClicked(const QModelIndex& index);
+    void activated(const QModelIndex& index);
     void currentChanged(const QModelIndex& current, const QModelIndex& previous);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
     void customContextMenuRequested(const QPoint& pos);

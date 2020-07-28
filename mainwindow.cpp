@@ -109,7 +109,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     m_tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
-    connect(m_tableView, &QTableView::doubleClicked, this, &MainWindow::doubleClicked);
+    connect(m_tableView, &QTableView::activated, this, &MainWindow::activated);
     connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentChanged);
     connect(m_tableView->horizontalHeader(), &QHeaderView::sortIndicatorChanged, this, &MainWindow::sortIndicatorChanged);
     connect(m_tableView, &QTableView::customContextMenuRequested, this, &MainWindow::customContextMenuRequested);
@@ -336,7 +336,7 @@ void MainWindow::timeout()
     m_model.filter(channel, topic, title);
 }
 
-void MainWindow::doubleClicked(const QModelIndex& index)
+void MainWindow::activated(const QModelIndex& index)
 {
     m_application.playPreferred(index);
 }

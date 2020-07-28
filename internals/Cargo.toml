@@ -19,5 +19,5 @@ zeptohttpc = { version = "0.1", features = ["native-tls"] }
 zstd-safe = { version = "2.0", default-features = false }
 
 [profile.release]
-panic = "abort"
 lto = true
+panic = "abort"
