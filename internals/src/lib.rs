@@ -22,7 +22,9 @@ use rusqlite::{Connection, NO_PARAMS};
 use xz2::bufread::XzDecoder;
 use zeptohttpc::{http::Request, RequestBuilderExt, RequestExt};
 
-use self::database::{create_schema, full_update, open_connection, partial_update, BlobFetcher};
+use self::database::{
+    create_schema, full_update, open_connection, partial_update, BlobFetcher, URL_LARGE, URL_SMALL,
+};
 use self::parser::{parse, Item};
 
 pub type Error = Box<dyn StdError + Send + Sync>;
@@ -228,15 +230,12 @@ SELECT
     topics.topic,
     shows.text_blob_id,
     shows.url_blob_id,
-    shows.title_offset,
+    shows.text_offset,
+    shows.url_offset,
+    shows.url_mask,
     shows.date,
     shows.time,
-    shows.duration,
-    shows.description_offset,
-    shows.website_offset,
-    shows.url_offset,
-    shows.url_small_offset,
-    shows.url_large_offset
+    shows.duration
 FROM channels, topics, shows, shows_by_title
 WHERE channels.id = topics.channel_id
 AND topics.id = shows.topic_id
@@ -255,28 +254,41 @@ AND shows.id = ?
         self.text_fetcher.fetch(&trans, row.get(2)?)?;
         self.url_fetcher.fetch(&trans, row.get(3)?)?;
 
-        let title = self.text_fetcher.get(row.get::<_, i64>(4)? as _);
+        let mut text_offset = row.get::<_, u32>(4)? as usize;
+        let mut url_offset = row.get::<_, u32>(5)? as usize;
+        let url_mask = row.get::<_, u32>(6)?;
 
-        let date = row.get(5)?;
-        let time = row.get(6)?;
-        let duration = row.get(7)?;
+        let date = row.get(7)?;
+        let time = row.get(8)?;
+        let duration = row.get(9)?;
 
-        let description = self.text_fetcher.get(row.get::<_, i64>(8)? as _);
-        let website = self.url_fetcher.get(row.get::<_, i64>(9)? as _);
+        let title = self.text_fetcher.get(text_offset);
+        text_offset += title.len() + 1;
 
-        let url = self.url_fetcher.get(row.get::<_, i64>(10)? as _);
+        let description = self.text_fetcher.get(text_offset);
 
-        let url_small = if let Some(offset) = row.get::<_, Option<i64>>(11)? {
-            Some(self.url_fetcher.get(offset as _))
+        let url = self.url_fetcher.get(url_offset);
+        url_offset += url.len() + 1;
+
+        let url_small = if url_mask & URL_SMALL != 0 {
+            let url = self.url_fetcher.get(url_offset);
+            url_offset += url.len() + 1;
+
+            Some(url)
         } else {
             None
         };
 
-        let url_large = if let Some(offset) = row.get::<_, Option<i64>>(12)? {
-            Some(self.url_fetcher.get(offset as _))
+        let url_large = if url_mask & URL_LARGE != 0 {
+            let url = self.url_fetcher.get(url_offset);
+            url_offset += url.len() + 1;
+
+            Some(url)
         } else {
             None
         };
+
+        let website = self.url_fetcher.get(url_offset);
 
         consumer(ShowData {
             channel: channel.into(),

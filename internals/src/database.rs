@@ -16,6 +16,9 @@ use super::{
 const TEXT_BLOB_LEN: usize = 256 * 1024;
 const URL_BLOB_LEN: usize = 512 * 1024;
 
+pub const URL_SMALL: u32 = 0b01;
+pub const URL_LARGE: u32 = 0b10;
+
 pub fn open_connection(path: &Path) -> Fallible<Connection> {
     let conn = Connection::open_with_flags(
         path,
@@ -35,7 +38,7 @@ pub fn create_schema(path: &Path) -> Fallible<(Connection, bool)> {
 
     let user_version: i32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
 
-    if user_version == 7 {
+    if user_version == 8 {
         return Ok((conn, false));
     }
 
@@ -66,16 +69,13 @@ CREATE TABLE shows (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     topic_id INTEGER NOT NULL,
     text_blob_id INTEGER NOT NULL,
+    text_offset INTEGER NOT NULL,
     url_blob_id INTEGER NOT NULL,
-    title_offset INTEGER NOT NULL,
+    url_offset INTEGER NOT NULL,
+    url_mask INTEGER NOT NULL,
     date INTEGER NOT NULL,
     time INTEGER NOT NULL,
-    duration INTEGER NOT NULL,
-    description_offset INTEGER NOT NULL,
-    website_offset INTEGER NOT NULL,
-    url_offset INTEGER NOT NULL,
-    url_small_offset INTEGER,
-    url_large_offset INTEGER
+    duration INTEGER NOT NULL
 );
 
 CREATE INDEX shows_by_topic ON shows (topic_id ASC, date DESC, time DESC);
@@ -90,7 +90,7 @@ CREATE TABLE blobs (
 INSERT INTO sqlite_sequence (name, seq) VALUES ('shows', 0);
 INSERT INTO sqlite_sequence (name, seq) VALUES ('blobs', 0);
 
-PRAGMA user_version = 7;
+PRAGMA user_version = 8;
 
 COMMIT;
 "#,
@@ -124,7 +124,7 @@ pub fn partial_update(conn: &Connection, items: &Receiver<Item>) -> Fallible<()>
         r#"
 SELECT
     text_blob_id,
-    title_offset,
+    text_offset,
     url_blob_id,
     url_offset,
     id
@@ -189,17 +189,14 @@ fn update<D: FnMut(i64, &str, &str) -> Fallible<()>>(
 INSERT INTO shows (
     topic_id,
     text_blob_id,
+    text_offset,
     url_blob_id,
-    title_offset,
+    url_offset,
+    url_mask,
     date,
     time,
-    duration,
-    description_offset,
-    website_offset,
-    url_offset,
-    url_small_offset,
-    url_large_offset
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    duration
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 "#,
     )?;
 
@@ -298,36 +295,34 @@ fn insert_show_and_title(
     insert_title: &mut Statement,
     item: &Item,
 ) -> Fallible<()> {
-    let title_offset = text_compr.push(&item.title)?;
-    let desc_offset = text_compr.push(&item.description)?;
-
-    let website_offset = url_compr.push(&item.website)?;
+    let text_offset = text_compr.push(&item.title)?;
+    text_compr.push(&item.description)?;
 
     let url_offset = url_compr.push(&item.url)?;
-    let url_small_offset = item
-        .url_small
-        .as_ref()
-        .map(|url| url_compr.push(url))
-        .transpose()?;
-    let url_large_offset = item
-        .url_large
-        .as_ref()
-        .map(|url| url_compr.push(url))
-        .transpose()?;
+    let mut url_mask = 0;
+
+    if let Some(url_small) = &item.url_small {
+        url_compr.push(url_small)?;
+        url_mask |= URL_SMALL;
+    }
+
+    if let Some(url_large) = &item.url_large {
+        url_compr.push(url_large)?;
+        url_mask |= URL_LARGE;
+    }
+
+    url_compr.push(&item.website)?;
 
     insert_show.execute(params![
         topic_id,
         text_blob_id,
+        text_offset,
         url_blob_id,
-        title_offset,
+        url_offset,
+        url_mask,
         to_julian_day(item.date),
         item.time.num_seconds_from_midnight(),
         item.duration.num_seconds_from_midnight(),
-        desc_offset,
-        website_offset,
-        url_offset,
-        url_small_offset,
-        url_large_offset,
     ])?;
 
     insert_title.execute(params![conn.last_insert_rowid(), item.title])?;
