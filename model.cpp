@@ -328,9 +328,9 @@ void Model::update()
 {
     beginResetModel();
 
-    query();
     fetchChannels();
     fetchTopics();
+    query();
 
     endResetModel();
 }
@@ -351,7 +351,7 @@ Model::ResultOf< Member > Model::fetchShow(const quintptr id, Member member) con
 
     auto show = m_database.show(id);
 
-    const auto value = member(*show);
+    auto value = member(*show);
 
     m_cache.insert(id, show.release());
 
@@ -361,7 +361,6 @@ Model::ResultOf< Member > Model::fetchShow(const quintptr id, Member member) con
 void Model::fetchChannels()
 {
     auto channels = m_database.channels();
-    channels.prepend(QString());
 
     if (m_channels->stringList() != channels)
     {
@@ -372,7 +371,6 @@ void Model::fetchChannels()
 void Model::fetchTopics()
 {
     auto topics = m_database.topics(m_channel);
-    topics.prepend(QString());
 
     if (m_topics->stringList() != topics)
     {

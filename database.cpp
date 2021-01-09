@@ -243,6 +243,7 @@ std::unique_ptr< Show > Database::show(const quintptr id) const
 QStringList Database::channels() const
 {
     QStringList channels;
+    channels.append(QString());
 
     if(m_internals != nullptr)
     {
@@ -255,6 +256,7 @@ QStringList Database::channels() const
 QStringList Database::topics(const QString& channel) const
 {
     QStringList topics;
+    topics.append(QString());
 
     if(m_internals != nullptr)
     {
