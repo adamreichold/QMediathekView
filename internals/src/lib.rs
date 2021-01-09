@@ -229,8 +229,8 @@ SELECT
     channels.channel,
     topics.topic,
     shows.text_blob_id,
-    shows.url_blob_id,
     shows.text_offset,
+    shows.url_blob_id,
     shows.url_offset,
     shows.url_mask,
     shows.date,
@@ -251,44 +251,33 @@ AND shows.id = ?
         let channel = row.get_raw(0).as_str()?;
         let topic = row.get_raw(1).as_str()?;
 
-        self.text_fetcher.fetch(&trans, row.get(2)?)?;
-        self.url_fetcher.fetch(&trans, row.get(3)?)?;
+        let mut texts = self.text_fetcher.fetch(&trans, row.get(2)?, row.get(3)?)?;
+        let mut urls = self.url_fetcher.fetch(&trans, row.get(4)?, row.get(5)?)?;
 
-        let mut text_offset = row.get::<_, u32>(4)? as usize;
-        let mut url_offset = row.get::<_, u32>(5)? as usize;
         let url_mask = row.get::<_, u32>(6)?;
 
         let date = row.get(7)?;
         let time = row.get(8)?;
         let duration = row.get(9)?;
 
-        let title = self.text_fetcher.get(text_offset);
-        text_offset += title.len() + 1;
+        let title = texts.next().unwrap();
+        let description = texts.next().unwrap();
 
-        let description = self.text_fetcher.get(text_offset);
-
-        let url = self.url_fetcher.get(url_offset);
-        url_offset += url.len() + 1;
+        let url = urls.next().unwrap();
 
         let url_small = if url_mask & URL_SMALL != 0 {
-            let url = self.url_fetcher.get(url_offset);
-            url_offset += url.len() + 1;
-
-            Some(url)
+            Some(urls.next().unwrap())
         } else {
             None
         };
 
         let url_large = if url_mask & URL_LARGE != 0 {
-            let url = self.url_fetcher.get(url_offset);
-            url_offset += url.len() + 1;
-
-            Some(url)
+            Some(urls.next().unwrap())
         } else {
             None
         };
 
-        let website = self.url_fetcher.get(url_offset);
+        let website = urls.next().unwrap();
 
         consumer(ShowData {
             channel: channel.into(),

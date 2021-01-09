@@ -1,4 +1,5 @@
 use std::fs::{create_dir_all, remove_file};
+use std::iter::from_fn;
 use std::mem::replace;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
@@ -148,13 +149,13 @@ ORDER BY id
         let mut rows = select_shows.query(params![topic_id, max_show_id])?;
 
         while let Some(row) = rows.next()? {
-            text_fetcher.fetch(conn, row.get(0)?)?;
-            if title.as_bytes() != text_fetcher.get(row.get::<_, u32>(1)? as _) {
+            let mut texts = text_fetcher.fetch(conn, row.get(0)?, row.get(1)?)?;
+            if title.as_bytes() != texts.next().unwrap() {
                 continue;
             }
 
-            url_fetcher.fetch(conn, row.get(2)?)?;
-            if url.as_bytes() != url_fetcher.get(row.get::<_, u32>(3)? as _) {
+            let mut urls = url_fetcher.fetch(conn, row.get(2)?, row.get(3)?)?;
+            if url.as_bytes() != urls.next().unwrap() {
                 continue;
             }
 
@@ -381,29 +382,34 @@ impl BlobFetcher {
         }
     }
 
-    pub fn fetch(&mut self, conn: &Connection, blob_id: i64) -> Fallible<()> {
-        if self.blob_id == Some(blob_id) {
-            return Ok(());
+    pub fn fetch(
+        &mut self,
+        conn: &Connection,
+        blob_id: i64,
+        offset: u32,
+    ) -> Fallible<impl Iterator<Item = &[u8]>> {
+        if self.blob_id != Some(blob_id) {
+            let mut stmt = conn.prepare_cached("SELECT blob FROM blobs WHERE id = ?")?;
+            let mut rows = stmt.query(params![blob_id])?;
+            let row = rows
+                .next()?
+                .ok_or_else(|| Error::from(format!("No BLOB with ID {}", blob_id)))?;
+
+            let blob = row.get_raw(0).as_blob()?;
+
+            self.decompr.decompress(blob)?;
+            self.blob_id = Some(blob_id);
         }
 
-        let mut stmt = conn.prepare_cached("SELECT blob FROM blobs WHERE id = ?")?;
-        let mut rows = stmt.query(params![blob_id])?;
-        let row = rows
-            .next()?
-            .ok_or_else(|| Error::from(format!("No BLOB with ID {}", blob_id)))?;
+        let mut buf = &self.decompr.buf()[offset as usize..];
 
-        let blob = row.get_raw(0).as_blob()?;
-
-        self.decompr.decompress(blob)?;
-        self.blob_id = Some(blob_id);
-
-        Ok(())
-    }
-
-    pub fn get(&self, offset: usize) -> &[u8] {
-        let buf = &self.decompr.buf()[offset..];
-        let pos = find_bytes(buf, b"\0").unwrap();
-        &buf[..pos]
+        Ok(from_fn(move || {
+            find_bytes(buf, b"\0").map(|pos| {
+                let val = &buf[..pos];
+                buf = &buf[pos + 1..];
+                val
+            })
+        }))
     }
 }
 
