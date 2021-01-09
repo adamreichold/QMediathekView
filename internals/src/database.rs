@@ -149,12 +149,12 @@ ORDER BY id
 
         while let Some(row) = rows.next()? {
             text_fetcher.fetch(conn, row.get(0)?)?;
-            if title.as_bytes() != text_fetcher.get(row.get::<_, i64>(1)? as _) {
+            if title.as_bytes() != text_fetcher.get(row.get::<_, u32>(1)? as _) {
                 continue;
             }
 
             url_fetcher.fetch(conn, row.get(2)?)?;
-            if url.as_bytes() != url_fetcher.get(row.get::<_, i64>(3)? as _) {
+            if url.as_bytes() != url_fetcher.get(row.get::<_, u32>(3)? as _) {
                 continue;
             }
 
@@ -266,14 +266,13 @@ INSERT INTO shows (
         )?;
 
         if text_compr.len() >= TEXT_BLOB_LEN {
-            text_compr.rotate(
-                replace(&mut text_blob_id, next_blob_id()?),
-                &mut insert_blob,
-            )?;
+            let blob_id = replace(&mut text_blob_id, next_blob_id()?);
+            text_compr.rotate(blob_id, &mut insert_blob)?;
         }
 
         if url_compr.len() >= URL_BLOB_LEN {
-            url_compr.rotate(replace(&mut url_blob_id, next_blob_id()?), &mut insert_blob)?;
+            let blob_id = replace(&mut url_blob_id, next_blob_id()?);
+            url_compr.rotate(blob_id, &mut insert_blob)?;
         }
     }
 
