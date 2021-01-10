@@ -100,7 +100,7 @@ COMMIT;
     Ok((conn, true))
 }
 
-pub fn full_update(conn: &Connection, items: &Receiver<Item>) -> Fallible<()> {
+pub fn full_update(conn: &Connection, items: &Receiver<Item>) -> Fallible {
     conn.execute_batch(
         r#"
 DELETE FROM blobs;
@@ -114,7 +114,7 @@ DELETE FROM channels;
     update(conn, items, |_, _, _| Ok(()))
 }
 
-pub fn partial_update(conn: &Connection, items: &Receiver<Item>) -> Fallible<()> {
+pub fn partial_update(conn: &Connection, items: &Receiver<Item>) -> Fallible {
     let max_show_id: i64 = conn.query_row(
         "SELECT seq FROM sqlite_sequence WHERE name = 'shows'",
         NO_PARAMS,
@@ -171,11 +171,11 @@ ORDER BY id
     })
 }
 
-fn update<D: FnMut(i64, &str, &str) -> Fallible<()>>(
+fn update<D: FnMut(i64, &str, &str) -> Fallible>(
     conn: &Connection,
     items: &Receiver<Item>,
     mut deleter: D,
-) -> Fallible<()> {
+) -> Fallible {
     let mut select_channel = conn.prepare("SELECT id FROM channels WHERE channel = ?")?;
     let mut insert_channel = conn.prepare("INSERT INTO channels (channel) VALUES (?)")?;
     let mut channel_id = 0;
@@ -294,7 +294,7 @@ fn insert_show_and_title(
     insert_show: &mut Statement,
     insert_title: &mut Statement,
     item: &Item,
-) -> Fallible<()> {
+) -> Fallible {
     let text_offset = text_compr.push(&item.title)?;
     text_compr.push(&item.description)?;
 
