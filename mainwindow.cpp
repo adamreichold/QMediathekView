@@ -132,14 +132,14 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_channelBox->setModel(m_model.channels());
     m_channelBox->setEditable(true);
     m_channelBox->setMinimumContentsLength(minimumChannelLength);
-    m_channelBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
+    m_channelBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     searchLayout->addRow(tr("Channel"), m_channelBox);
 
     m_topicBox = new QComboBox(searchWidget);
     m_topicBox->setModel(m_model.topics());
     m_topicBox->setEditable(true);
     m_topicBox->setMinimumContentsLength(minimumTopicLength);
-    m_topicBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
+    m_topicBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     searchLayout->addRow(tr("Topic"), m_topicBox);
 
     m_titleEdit = new QLineEdit(searchWidget);

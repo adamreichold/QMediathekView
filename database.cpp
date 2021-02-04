@@ -149,7 +149,7 @@ Database::Database(Settings& settings, QObject* parent)
     : QObject(parent)
     , m_settings(settings)
 {
-    const auto path = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+    const auto path = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     bool needsUpdate = false;
 
     m_internals = internals_init(path.toLocal8Bit().constData(), &needsUpdate);
