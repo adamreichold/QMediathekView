@@ -207,7 +207,10 @@ void Application::startPlay(const QString& url) const
 
     if (!command.isEmpty())
     {
-        if (!QProcess::startDetached(command.arg(url)))
+        auto arguments = QProcess::splitCommand(command.arg(url));
+        auto program = arguments.takeFirst();
+
+        if (!QProcess::startDetached(program, arguments))
         {
             QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
         }
@@ -224,7 +227,10 @@ void Application::startDownload(const QString& title, const QString& url) const
 
     if (!command.isEmpty())
     {
-        if (!QProcess::startDetached(command.arg(url)))
+        auto arguments = QProcess::splitCommand(command.arg(url));
+        auto program = arguments.takeFirst();
+
+        if (!QProcess::startDetached(program, arguments))
         {
             QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute download command."));
         }
