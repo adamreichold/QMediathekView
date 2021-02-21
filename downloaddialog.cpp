@@ -165,8 +165,19 @@ void DownloadDialog::readyRead()
 
 void DownloadDialog::downloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
+    if (bytesTotal < 0)
+    {
+        bytesTotal = 0;
+    }
+
+    while (bytesTotal > std::numeric_limits< int >::max())
+    {
+        bytesReceived /= 1024;
+        bytesTotal /= 1024;
+    }
+
     m_progressBar->setValue(bytesReceived);
-    m_progressBar->setMaximum(qMax(qint64(0), bytesTotal));
+    m_progressBar->setMaximum(bytesTotal);
 }
 
 void DownloadDialog::finished()
