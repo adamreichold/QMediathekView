@@ -59,6 +59,22 @@ public:
     }
 };
 
+bool startDetached(QString command)
+{
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+
+        return QProcess::startDetached(command);
+
+#else
+
+        auto arguments = QProcess::splitCommand(command);
+        auto program = arguments.takeFirst();
+
+        return QProcess::startDetached(program, arguments);
+
+#endif // QT_VERSION
+}
+
 } // anonymous
 
 Application::Application(int& argc, char** argv)
@@ -207,10 +223,7 @@ void Application::startPlay(const QString& url) const
 
     if (!command.isEmpty())
     {
-        auto arguments = QProcess::splitCommand(command.arg(url));
-        auto program = arguments.takeFirst();
-
-        if (!QProcess::startDetached(program, arguments))
+        if (!startDetached(command.arg(url)))
         {
             QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute play command."));
         }
@@ -227,10 +240,7 @@ void Application::startDownload(const QString& title, const QString& url) const
 
     if (!command.isEmpty())
     {
-        auto arguments = QProcess::splitCommand(command.arg(url));
-        auto program = arguments.takeFirst();
-
-        if (!QProcess::startDetached(program, arguments))
+        if (!startDetached(command.arg(url)))
         {
             QMessageBox::critical(m_mainWindow, tr("Critical"), tr("Failed to execute download command."));
         }
