@@ -15,7 +15,7 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 twoway = "0.2"
 xz2 = "0.1"
-zeptohttpc = { version = "0.2", features = ["native-tls"] }
+zeptohttpc = { version = "0.3", features = ["native-tls"] }
 zstd-safe = { version = "3.0", default-features = false }
 
 [profile.release]
