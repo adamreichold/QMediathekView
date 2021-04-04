@@ -18,7 +18,7 @@ use std::str::from_utf8;
 use std::sync::mpsc::{sync_channel, Receiver};
 use std::thread::spawn;
 
-use rusqlite::{Connection, NO_PARAMS};
+use rusqlite::{Connection, ToSql};
 use xz2::bufread::XzDecoder;
 use zeptohttpc::{http::Request, RequestBuilderExt, RequestExt};
 
@@ -105,7 +105,7 @@ impl Internals {
 
         parser.join().unwrap()?;
 
-        trans.execute("ANALYZE", NO_PARAMS)?;
+        trans.execute("ANALYZE", [])?;
 
         trans.commit()?;
 
@@ -119,10 +119,10 @@ impl Internals {
             .conn
             .prepare_cached("SELECT DISTINCT(channel) FROM channels")?;
 
-        let mut rows = stmt.query(NO_PARAMS)?;
+        let mut rows = stmt.query([])?;
 
         while let Some(row) = rows.next()? {
-            consumer(row.get_raw(0).as_str()?.into());
+            consumer(row.get_ref_unwrap(0).as_str()?.into());
         }
 
         Ok(())
@@ -141,7 +141,7 @@ AND channels.channel LIKE ? || '%'
         let mut rows = stmt.query(&[&channel])?;
 
         while let Some(row) = rows.next()? {
-            consumer(row.get_raw(0).as_str()?.into());
+            consumer(row.get_ref_unwrap(0).as_str()?.into());
         }
 
         Ok(())
@@ -156,24 +156,24 @@ AND channels.channel LIKE ? || '%'
         sort_order: SortOrder,
         mut consumer: C,
     ) -> Fallible {
-        let mut params = Vec::new();
+        let mut params = Vec::<&dyn ToSql>::new();
 
         let channel_filter = if !channel.is_empty() {
-            params.push(channel);
+            params.push(&channel);
             "AND channels.channel LIKE ? || '%'"
         } else {
             ""
         };
 
         let topic_filter = if !topic.is_empty() {
-            params.push(topic);
+            params.push(&topic);
             "AND topics.topic LIKE ? || '%'"
         } else {
             ""
         };
 
         let title_filter = if !title.is_empty() {
-            params.push(title);
+            params.push(&title);
             r#"AND shows_by_title MATCH ? || '*'"#
         } else {
             ""
@@ -211,7 +211,7 @@ ORDER BY {}
             channel_filter, topic_filter, title_filter, order_by
         ))?;
 
-        let mut rows = stmt.query(&params)?;
+        let mut rows = stmt.query(params.as_slice())?;
 
         while let Some(row) = rows.next()? {
             consumer(row.get(0)?);
@@ -248,8 +248,8 @@ AND shows.id = ?
             .next()?
             .ok_or_else(|| Error::from(format!("No show with ID {}", id)))?;
 
-        let channel = row.get_raw(0).as_str()?;
-        let topic = row.get_raw(1).as_str()?;
+        let channel = row.get_ref_unwrap(0).as_str()?;
+        let topic = row.get_ref_unwrap(1).as_str()?;
 
         let mut texts = self.text_fetcher.fetch(&trans, row.get(2)?, row.get(3)?)?;
         let mut urls = self.url_fetcher.fetch(&trans, row.get(4)?, row.get(5)?)?;

@@ -5,7 +5,7 @@ use std::path::Path;
 use std::sync::mpsc::Receiver;
 
 use chrono::{NaiveDate, Timelike};
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Statement, NO_PARAMS};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Statement};
 use twoway::find_bytes;
 
 use super::{
@@ -117,7 +117,7 @@ DELETE FROM channels;
 pub fn partial_update(conn: &Connection, items: &Receiver<Item>) -> Fallible {
     let max_show_id: i64 = conn.query_row(
         "SELECT seq FROM sqlite_sequence WHERE name = 'shows'",
-        NO_PARAMS,
+        [],
         |row| row.get(0),
     )?;
 
@@ -211,8 +211,8 @@ INSERT INTO shows (
             conn.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'blobs'")?;
 
         move || {
-            update_blob_id.execute(NO_PARAMS)?;
-            select_blob_id.query_row(NO_PARAMS, |row| row.get::<_, i64>(0))
+            update_blob_id.execute([])?;
+            select_blob_id.query_row([], |row| row.get::<_, i64>(0))
         }
     };
 
@@ -395,7 +395,7 @@ impl BlobFetcher {
                 .next()?
                 .ok_or_else(|| Error::from(format!("No BLOB with ID {}", blob_id)))?;
 
-            let blob = row.get_raw(0).as_blob()?;
+            let blob = row.get_ref_unwrap(0).as_blob()?;
 
             self.decompr.decompress(blob)?;
             self.blob_id = Some(blob_id);
