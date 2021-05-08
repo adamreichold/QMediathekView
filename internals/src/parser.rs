@@ -2,9 +2,9 @@ use std::io::Read;
 use std::sync::mpsc::SyncSender;
 
 use chrono::{NaiveDate, NaiveTime};
+use memchr::memmem::find;
 use serde::Deserialize;
 use serde_json::{from_slice, from_str, value::RawValue};
-use twoway::find_bytes;
 
 use super::{Error, Fallible};
 
@@ -74,7 +74,7 @@ fn parse_header(input: &[u8]) -> Fallible<Option<usize>> {
         return Err("Malformed header".into());
     }
 
-    let pos = match find_bytes(&input[PREFIX.len()..], SUFFIX) {
+    let pos = match find(&input[PREFIX.len()..], SUFFIX) {
         Some(pos) => pos,
         None => return Ok(None),
     };
@@ -94,7 +94,7 @@ fn parse_item(input: &[u8]) -> Fallible<Option<(usize, Item)>> {
         return Err("Malformed item".into());
     }
 
-    let pos = match find_bytes(&input[PREFIX.len()..], SUFFIX) {
+    let pos = match find(&input[PREFIX.len()..], SUFFIX) {
         Some(pos) => pos,
         None => return Ok(None),
     };

@@ -5,8 +5,8 @@ use std::path::Path;
 use std::sync::mpsc::Receiver;
 
 use chrono::{NaiveDate, Timelike};
+use memchr::memchr;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Statement};
-use twoway::find_bytes;
 
 use super::{
     compressor::{BackgroundCompressor, Decompressor},
@@ -404,7 +404,7 @@ impl BlobFetcher {
         let mut buf = &self.decompr.buf()[offset as usize..];
 
         Ok(from_fn(move || {
-            find_bytes(buf, b"\0").map(|pos| {
+            memchr(b'\0', buf).map(|pos| {
                 let val = &buf[..pos];
                 buf = &buf[pos + 1..];
                 val
