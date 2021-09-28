@@ -1,4 +1,7 @@
-on: [push]
+on:
+  push:
+    branches:
+    - master
 
 jobs:
   build:
@@ -11,7 +14,14 @@ jobs:
         fetch-depth: 1
     - run: source .github/scripts/build.sh
       shell: bash
-    - uses: actions/upload-artifact@v2
+    - uses: ncipollo/release-action@v1
       with:
-        name: AppImage
-        path: QMediathekView*.AppImage*
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        omitNameDuringUpdate: true
+        removeArtifacts: true
+        tag: continuous
+        name: Continuous build
+        prerelease: true
+        artifacts: "QMediathekView*.AppImage*"
+        token: ${{ secrets.GITHUB_TOKEN }}
