@@ -1,4 +1,7 @@
-on: [push]
+on:
+  push:
+    branches:
+    - master
 
 jobs:
   build:
@@ -6,12 +9,22 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         fetch-depth: 1
     - run: source .github/scripts/build.sh
       shell: bash
-    - uses: actions/upload-artifact@v2
+    - uses: rickstaa/action-create-tag@v1
       with:
-        name: AppImage
-        path: QMediathekView*.AppImage*
+        tag: continuous
+        force_push_tag: true
+    - uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        removeArtifacts: true
+        tag: continuous
+        name: Continuous build
+        body: AppImage built automatically from latest commit.
+        prerelease: true
+        artifacts: "QMediathekView*.AppImage*"
+        token: ${{ secrets.GITHUB_TOKEN }}
