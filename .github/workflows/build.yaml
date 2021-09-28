@@ -1,0 +1,17 @@
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - run: source .github/scripts/build.sh
+      shell: bash
+    - uses: actions/upload-artifact@v2
+      with:
+        name: AppImage
+        path: QMediathekView*.AppImage*
