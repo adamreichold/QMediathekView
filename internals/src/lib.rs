@@ -97,7 +97,7 @@ impl Internals {
             parse(&mut XzDecoder::new(resp.into_body()), sender)
         });
 
-        let mut conn = open_connection(&path)?;
+        let mut conn = open_connection(path)?;
 
         let trans = conn.transaction()?;
 
