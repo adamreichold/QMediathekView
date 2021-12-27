@@ -135,10 +135,10 @@ void DownloadDialog::start()
 
     m_networkReply.reset(m_networkManager->get(request));
 
-    connect(m_networkReply.data(), &QNetworkReply::readyRead, this, &DownloadDialog::readyRead);
-    connect(m_networkReply.data(), &QNetworkReply::finished, this, &DownloadDialog::finished);
+    connect(m_networkReply.get(), &QNetworkReply::readyRead, this, &DownloadDialog::readyRead);
+    connect(m_networkReply.get(), &QNetworkReply::finished, this, &DownloadDialog::finished);
 
-    connect(m_networkReply.data(), &QNetworkReply::downloadProgress, this, &DownloadDialog::downloadProgress);
+    connect(m_networkReply.get(), &QNetworkReply::downloadProgress, this, &DownloadDialog::downloadProgress);
 
     m_startButton->setEnabled(false);
     m_cancelButton->setEnabled(true);

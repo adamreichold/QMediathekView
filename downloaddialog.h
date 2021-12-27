@@ -22,6 +22,8 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef DOWNLOADDIALOG_H
 #define DOWNLOADDIALOG_H
 
+#include <memory>
+
 #include <QDialog>
 #include <QUrl>
 
@@ -70,8 +72,8 @@ private:
     const QUrl m_url;
 
     QNetworkAccessManager* m_networkManager;
-    QScopedPointer< QNetworkReply > m_networkReply;
-    QScopedPointer< QFile > m_file;
+    std::unique_ptr< QNetworkReply > m_networkReply;
+    std::unique_ptr< QFile > m_file;
 
     QLineEdit* m_filePathEdit;
 
