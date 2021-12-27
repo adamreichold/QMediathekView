@@ -10,7 +10,7 @@ use zstd_safe::{
 
 use super::Fallible;
 
-const COMPRESSION_LEVEL: i32 = 13;
+const COMPRESSION_LEVEL: i32 = 12;
 
 pub struct BackgroundCompressor<T> {
     compr: Compressor,
