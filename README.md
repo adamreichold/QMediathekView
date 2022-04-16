@@ -1,4 +1,4 @@
-# QMediathekView [![Build Status](https://travis-ci.org/adamreichold/QMediathekView.svg?branch=master)](https://travis-ci.org/adamreichold/QMediathekView)
+# QMediathekView [![Build status](https://github.com/adamreichold/QMediathekView/actions/workflows/build.yaml/badge.svg)](https://github.com/adamreichold/QMediathekView/actions/workflows/build.yaml)
 
 _QMediathekView_ is an alternative Qt-based front-end for the database maintained by the [MediathekView](https://mediathekview.de/) project. It has fewer features than the Java-based original, but should also consume less resources.
 
