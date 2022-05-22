@@ -39,13 +39,7 @@ DEFINE_KEY(userAgent);
 DEFINE_KEY(fullListUrl);
 DEFINE_KEY(partialListUrl);
 
-DEFINE_KEY(fullListMirrors);
-DEFINE_KEY(partialListMirrors);
-
-DEFINE_KEY(mirrorsUpdateAfterDays);
 DEFINE_KEY(databaseUpdateAfterHours);
-
-DEFINE_KEY(mirrorsUpdatedOn);
 DEFINE_KEY(databaseUpdatedOn);
 
 DEFINE_KEY(playCommand);

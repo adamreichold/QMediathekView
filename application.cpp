@@ -63,14 +63,14 @@ bool startDetached(QString command)
 {
 #if QT_VERSION < QT_VERSION_CHECK(5,15,0)
 
-        return QProcess::startDetached(command);
+    return QProcess::startDetached(command);
 
 #else
 
-        auto arguments = QProcess::splitCommand(command);
-        auto program = arguments.takeFirst();
+    auto arguments = QProcess::splitCommand(command);
+    auto program = arguments.takeFirst();
 
-        return QProcess::startDetached(program, arguments);
+    return QProcess::startDetached(program, arguments);
 
 #endif // QT_VERSION
 }
