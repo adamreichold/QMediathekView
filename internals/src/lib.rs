@@ -380,7 +380,7 @@ pub unsafe extern "C" fn internals_init(
 
 #[no_mangle]
 pub unsafe extern "C" fn internals_drop(internals: *mut Internals) {
-    Box::from_raw(internals);
+    let _ = Box::from_raw(internals);
 }
 
 #[repr(C)]
