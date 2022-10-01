@@ -26,8 +26,8 @@ pub fn open_connection(path: &Path) -> Fallible<Connection> {
         OpenFlags::default() | OpenFlags::SQLITE_OPEN_PRIVATE_CACHE,
     )?;
 
-    conn.pragma_update(None, "journal_mode", &"WAL")?;
-    conn.pragma_update(None, "synchronous", &"NORMAL")?;
+    conn.pragma_update(None, "journal_mode", "WAL")?;
+    conn.pragma_update(None, "synchronous", "NORMAL")?;
 
     Ok(conn)
 }
@@ -111,7 +111,7 @@ DELETE FROM channels;
 "#,
     )?;
 
-    update(conn, items, |_, _, _| Ok(()))
+    update(conn, items, &mut |_, _, _| Ok(()))
 }
 
 pub fn partial_update(conn: &Connection, items: &Receiver<Item>) -> Fallible {
@@ -145,7 +145,7 @@ ORDER BY id
     let mut text_fetcher = BlobFetcher::new();
     let mut url_fetcher = BlobFetcher::new();
 
-    update(conn, items, |topic_id, title, url| {
+    update(conn, items, &mut |topic_id, title, url| {
         let mut rows = select_shows.query(params![topic_id, max_show_id])?;
 
         while let Some(row) = rows.next()? {
@@ -171,10 +171,10 @@ ORDER BY id
     })
 }
 
-fn update<D: FnMut(i64, &str, &str) -> Fallible>(
+fn update(
     conn: &Connection,
     items: &Receiver<Item>,
-    mut deleter: D,
+    deleter: &mut dyn FnMut(i64, &str, &str) -> Fallible,
 ) -> Fallible {
     let mut select_channel = conn.prepare("SELECT id FROM channels WHERE channel = ?")?;
     let mut insert_channel = conn.prepare("INSERT INTO channels (channel) VALUES (?)")?;

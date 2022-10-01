@@ -138,7 +138,7 @@ AND channels.channel LIKE ? || '%'
 "#,
         )?;
 
-        let mut rows = stmt.query(&[&channel])?;
+        let mut rows = stmt.query([&channel])?;
 
         while let Some(row) = rows.next()? {
             consumer(row.get_ref_unwrap(0).as_str()?.into());
@@ -243,7 +243,7 @@ AND shows.id = ?
 "#,
         )?;
 
-        let mut rows = stmt.query(&[&id])?;
+        let mut rows = stmt.query([&id])?;
         let row = rows
             .next()?
             .ok_or_else(|| Error::from(format!("No show with ID {}", id)))?;
