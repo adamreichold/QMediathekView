@@ -4,9 +4,9 @@ use std::mem::replace;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
 
-use chrono::{NaiveDate, Timelike};
 use memchr::memchr;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Statement};
+use time::Time;
 
 use super::{
     compressor::{BackgroundCompressor, Decompressor},
@@ -320,9 +320,9 @@ fn insert_show_and_title(
         url_blob_id,
         url_offset,
         url_mask,
-        to_julian_day(item.date),
-        item.time.num_seconds_from_midnight(),
-        item.duration.num_seconds_from_midnight(),
+        item.date.to_julian_day(),
+        seconds_from_midnight(item.time),
+        seconds_from_midnight(item.duration),
     ])?;
 
     insert_title.execute(params![conn.last_insert_rowid(), item.title])?;
@@ -413,7 +413,6 @@ impl BlobFetcher {
     }
 }
 
-fn to_julian_day(date: NaiveDate) -> i64 {
-    date.signed_duration_since(NaiveDate::from_ymd(-4713, 11, 24))
-        .num_days()
+fn seconds_from_midnight(time: Time) -> i64 {
+    (time - Time::MIDNIGHT).whole_seconds()
 }

@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["staticlib"]
 
 [dependencies]
-chrono = { version = "0.4", default-features = false }
+time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2.4"
 rayon-core = "1.6"
 rusqlite = { version = "0.28", features = ["bundled"] }

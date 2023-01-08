@@ -1,10 +1,10 @@
 use std::io::Read;
 use std::sync::mpsc::SyncSender;
 
-use chrono::{NaiveDate, NaiveTime};
 use memchr::memmem::find;
 use serde::Deserialize;
 use serde_json::{from_slice, from_str, value::RawValue};
+use time::{macros::format_description, Date, Time};
 
 use super::{Error, Fallible};
 
@@ -12,9 +12,9 @@ pub struct Item {
     pub channel: String,
     pub topic: String,
     pub title: String,
-    pub date: NaiveDate,
-    pub time: NaiveTime,
-    pub duration: NaiveTime,
+    pub date: Date,
+    pub time: Time,
+    pub duration: Time,
     pub description: String,
     pub website: String,
     pub url: String,
@@ -145,9 +145,9 @@ fn parse_fields(fields: &[u8]) -> Fallible<Item> {
     let topic = fields.to_string(1)?;
     let title = fields.to_string(2)?;
 
-    let date = parse_date(fields.as_str(3)?)?.unwrap_or_else(|| NaiveDate::from_ymd(1, 1, 1));
-    let time = parse_time(fields.as_str(4)?)?.unwrap_or_else(|| NaiveTime::from_hms(0, 0, 0));
-    let duration = parse_time(fields.as_str(5)?)?.unwrap_or_else(|| NaiveTime::from_hms(0, 0, 0));
+    let date = parse_date(fields.as_str(3)?);
+    let time = parse_time(fields.as_str(4)?);
+    let duration = parse_time(fields.as_str(5)?);
 
     let description = fields.to_string(7)?;
     let website = fields.to_string(9)?;
@@ -171,50 +171,12 @@ fn parse_fields(fields: &[u8]) -> Fallible<Item> {
     })
 }
 
-fn parse_date(field: &str) -> Fallible<Option<NaiveDate>> {
-    if field.is_empty() {
-        return Ok(None);
-    }
-
-    let mut comps = field.split('.');
-
-    let day = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing day"))?
-        .parse()?;
-    let month = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing month"))?
-        .parse()?;
-    let year = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing year"))?
-        .parse()?;
-
-    Ok(Some(NaiveDate::from_ymd(year, month, day)))
+fn parse_date(field: &str) -> Date {
+    Date::parse(field, &format_description!("[day].[month].[year]")).unwrap_or(Date::MIN)
 }
 
-fn parse_time(field: &str) -> Fallible<Option<NaiveTime>> {
-    if field.is_empty() {
-        return Ok(None);
-    }
-
-    let mut comps = field.split(':');
-
-    let hour = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing hours"))?
-        .parse()?;
-    let min = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing minutes"))?
-        .parse()?;
-    let sec = comps
-        .next()
-        .ok_or_else(|| Error::from("Missing seconds"))?
-        .parse()?;
-
-    Ok(Some(NaiveTime::from_hms(hour, min, sec)))
+fn parse_time(field: &str) -> Time {
+    Time::parse(field, &format_description!("[hour]:[minute]:[second]")).unwrap_or(Time::MIDNIGHT)
 }
 
 fn parse_url_suffix(url: &str, mut field: String) -> Fallible<Option<String>> {
