@@ -3,10 +3,7 @@ use std::mem::replace;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use rayon_core::spawn;
-use zstd_safe::{
-    compress_bound, compress_cctx, create_cctx, create_dctx, decompress_dctx, get_error_name,
-    get_frame_content_size, CCtx, DCtx, CONTENTSIZE_ERROR, CONTENTSIZE_UNKNOWN,
-};
+use zstd_safe::{compress_bound, get_error_name, get_frame_content_size, CCtx, DCtx};
 
 use super::Fallible;
 
@@ -101,7 +98,7 @@ struct Compressor {
 impl Compressor {
     fn new() -> Self {
         Self {
-            ctx: create_cctx(),
+            ctx: CCtx::create(),
             compr_buf: Vec::new(),
             buf: Vec::new(),
         }
@@ -122,12 +119,10 @@ impl Compressor {
     fn compress(&mut self) -> Fallible {
         self.compr_buf.resize(compress_bound(self.buf.len()), 0);
 
-        match compress_cctx(
-            &mut self.ctx,
-            &mut self.compr_buf,
-            &self.buf,
-            COMPRESSION_LEVEL,
-        ) {
+        match self
+            .ctx
+            .compress(&mut self.compr_buf, &self.buf, COMPRESSION_LEVEL)
+        {
             Ok(len) => {
                 self.compr_buf.truncate(len);
 
@@ -146,7 +141,7 @@ pub struct Decompressor {
 impl Decompressor {
     pub fn new() -> Self {
         Self {
-            ctx: create_dctx(),
+            ctx: DCtx::create(),
             buf: Vec::new(),
         }
     }
@@ -157,13 +152,13 @@ impl Decompressor {
 
     pub fn decompress<'a>(&'a mut self, compr_buf: &[u8]) -> Fallible<&'a [u8]> {
         match get_frame_content_size(compr_buf) {
-            CONTENTSIZE_ERROR | CONTENTSIZE_UNKNOWN => {
-                return Err("Cannot determine uncompressed size".into())
+            Ok(Some(len)) => self.buf.resize(len.try_into().unwrap(), 0),
+            Ok(None) | Err(_) => {
+                return Err("Cannot determine uncompressed size".into());
             }
-            len => self.buf.resize(len.try_into().unwrap(), 0),
         }
 
-        match decompress_dctx(&mut self.ctx, &mut self.buf, compr_buf) {
+        match self.ctx.decompress(&mut self.buf, compr_buf) {
             Ok(len) => {
                 self.buf.truncate(len);
 
