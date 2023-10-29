@@ -89,6 +89,8 @@ DownloadDialog::DownloadDialog(
 
     m_cancelButton->setEnabled(false);
     m_filePathEdit->setText(m_settings.downloadFolder().absoluteFilePath(m_url.fileName()));
+
+    adjustSize();
 }
 
 DownloadDialog::~DownloadDialog()
