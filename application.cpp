@@ -77,13 +77,13 @@ bool startDetached(QString command)
 
 } // anonymous
 
-Application::Application(int& argc, char** argv)
+Application::Application(int& argc, char** argv, bool headless)
     : QApplication(argc, argv)
     , m_settings(new Settings(this))
     , m_database(new Database(*m_settings, this))
     , m_model(new Model(*m_database, this))
     , m_networkManager(new QNetworkAccessManager(this))
-    , m_mainWindow(new MainWindow(*m_settings, *m_model, *this))
+    , m_mainWindow(!headless ? new MainWindow(*m_settings, *m_model, *this) : nullptr)
 {
     setWindowIcon(QIcon::fromTheme(projectName));
     setStyle(new ProxyStyle);
@@ -93,9 +93,18 @@ Application::Application(int& argc, char** argv)
     connect(m_database, &Database::updated, this, &Application::completedDatabaseUpdate);
     connect(m_database, &Database::failedToUpdate, this, &Application::failedToUpdateDatabase);
 
-    connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
-    connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
-    connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
+    if (m_mainWindow != nullptr)
+    {
+        connect(this, &Application::startedDatabaseUpdate, m_mainWindow, &MainWindow::showStartedDatabaseUpdate);
+        connect(this, &Application::completedDatabaseUpdate, m_mainWindow, &MainWindow::showCompletedDatabaseUpdate);
+        connect(this, &Application::failedToUpdateDatabase, m_mainWindow, &MainWindow::showDatabaseUpdateFailure);
+    }
+    else
+    {
+        connect(this, &Application::startedDatabaseUpdate, this, &Application::logStartedDatabaseUpdate);
+        connect(this, &Application::completedDatabaseUpdate, this, &Application::logCompletedDatabaseUpdate);
+        connect(this, &Application::failedToUpdateDatabase, this, &Application::logDatabaseUpdateFailure);
+    }
 }
 
 Application::~Application() = default;
@@ -104,8 +113,11 @@ int Application::exec()
 {
     QTimer::singleShot(0, this, &Application::checkUpdateDatabase);
 
-    m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
-    m_mainWindow->show();
+    if (m_mainWindow != nullptr)
+    {
+        m_mainWindow->setAttribute(Qt::WA_DeleteOnClose);
+        m_mainWindow->show();
+    }
 
     return QApplication::exec();
 }
@@ -159,6 +171,10 @@ void Application::checkUpdateDatabase()
     if (!updatedOn.isValid() || updateAfter < updatedBefore)
     {
         updateDatabase();
+    }
+    else if (m_mainWindow == nullptr)
+    {
+        quit();
     }
 }
 
@@ -256,6 +272,23 @@ void Application::startDownload(const QString& title, const QString& url) const
     }
 }
 
+void Application::logStartedDatabaseUpdate()
+{
+    qInfo() << tr("Started database update...");
+}
+
+void Application::logCompletedDatabaseUpdate()
+{
+    qInfo() << tr("Successfully updated database.");
+    quit();
+}
+
+void Application::logDatabaseUpdateFailure(const QString& error)
+{
+    qWarning() << tr("Failed to update database: %1").arg(error);
+    quit();
+}
+
 } // QMediathekView
 
 int main(int argc, char** argv)
@@ -265,5 +298,17 @@ int main(int argc, char** argv)
     QApplication::setOrganizationName(projectName);
     QApplication::setApplicationName(projectName);
 
-    return Application(argc, argv).exec();
+    bool headless = false;
+
+    for (int argi = 1; argi < argc; ++argi)
+    {
+        const char* const arg = argv[argi];
+
+        if (strcmp(arg, "--headless") == 0)
+        {
+            headless = true;
+        }
+    }
+
+    return Application(argc, argv, headless).exec();
 }

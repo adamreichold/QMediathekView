@@ -40,7 +40,7 @@ class Application : public QApplication
     Q_DISABLE_COPY(Application)
 
 public:
-    Application(int& argc, char** argv);
+    Application(int& argc, char** argv, bool headless);
     ~Application();
 
 signals:
@@ -69,6 +69,10 @@ public:
 private:
     void startPlay(const QString& url) const;
     void startDownload(const QString& title, const QString& url) const;
+
+    void logStartedDatabaseUpdate();
+    void logCompletedDatabaseUpdate();
+    void logDatabaseUpdateFailure(const QString& error);
 
 private:
     Settings* m_settings;
