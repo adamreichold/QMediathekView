@@ -81,7 +81,7 @@ CREATE TABLE shows (
 
 CREATE INDEX shows_by_topic ON shows (topic_id ASC, date DESC, time DESC);
 
-CREATE VIRTUAL TABLE shows_by_title USING FTS5 (title, content='', detail=none);
+CREATE VIRTUAL TABLE shows_by_title USING FTS5 (title, content='', contentless_delete=1, detail=none);
 
 CREATE TABLE blobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
