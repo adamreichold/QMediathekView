@@ -87,6 +87,7 @@ DownloadDialog::DownloadDialog(
     m_progressBar = new QProgressBar(this);
     layout->addWidget(m_progressBar, 3, 0, 1, 5);
 
+    m_startButton->setDefault(true);
     m_cancelButton->setEnabled(false);
     m_filePathEdit->setText(m_settings.downloadFolder().absoluteFilePath(m_url.fileName()));
 
