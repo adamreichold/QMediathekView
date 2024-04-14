@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_json::{from_slice, from_str, value::RawValue};
 use time::{macros::format_description, Date, Time};
 
-use super::{Error, Fallible};
+use super::Fallible;
 
 pub struct Item {
     pub channel: String,
@@ -131,11 +131,11 @@ fn parse_fields(fields: &[u8]) -> Fallible<Item> {
         }
 
         fn to_string(&self, index: usize) -> Fallible<String> {
-            from_str(self.get(index)).map_err(Error::from)
+            from_str(self.get(index)).map_err(Into::into)
         }
 
         fn as_str(&self, index: usize) -> Fallible<&str> {
-            from_str(self.get(index)).map_err(Error::from)
+            from_str(self.get(index)).map_err(Into::into)
         }
     }
 
@@ -186,9 +186,7 @@ fn parse_url_suffix(url: &str, mut field: String) -> Fallible<Option<String>> {
 
     if let Some(pos) = field.find('|') {
         let index = field[..pos].parse()?;
-        let url = url
-            .get(..index)
-            .ok_or_else(|| Error::from("Malformed URL suffix"))?;
+        let url = url.get(..index).ok_or("Malformed URL suffix")?;
 
         field.replace_range(..=pos, url);
     } else {

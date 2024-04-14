@@ -1,11 +1,10 @@
-#![allow(improper_ctypes)]
 #![allow(clippy::missing_safety_doc)]
 
 mod compressor;
 mod database;
 mod parser;
 
-use std::error::Error as StdError;
+use std::error::Error;
 use std::ffi::{CStr, CString, OsStr};
 use std::os::{
     raw::{c_char, c_void},
@@ -14,7 +13,7 @@ use std::os::{
 use std::path::{Path, PathBuf};
 use std::ptr::{null, null_mut};
 use std::slice::from_raw_parts;
-use std::str::from_utf8;
+use std::str::from_utf8_unchecked;
 use std::sync::mpsc::{sync_channel, Receiver};
 use std::thread::spawn;
 
@@ -27,8 +26,7 @@ use self::database::{
 };
 use self::parser::{parse, Item};
 
-pub type Error = Box<dyn StdError + Send + Sync>;
-pub type Fallible<T = ()> = Result<T, Error>;
+pub type Fallible<T = ()> = Result<T, Box<dyn Error + Send + Sync>>;
 
 #[repr(C)]
 pub enum SortColumn {
@@ -246,7 +244,7 @@ AND shows.id = ?
         let mut rows = stmt.query([&id])?;
         let row = rows
             .next()?
-            .ok_or_else(|| Error::from(format!("No show with ID {}", id)))?;
+            .ok_or_else(|| format!("No show with ID {}", id))?;
 
         let channel = row.get_ref_unwrap(0).as_str()?;
         let topic = row.get_ref_unwrap(1).as_str()?;
@@ -304,7 +302,6 @@ extern "C" {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub struct StringData {
     ptr: *const c_char,
     len: usize,
@@ -342,7 +339,7 @@ impl From<&str> for StringData {
 
 impl StringData {
     unsafe fn as_str(&self) -> &str {
-        from_utf8(from_raw_parts(self.ptr.cast(), self.len)).unwrap()
+        from_utf8_unchecked(from_raw_parts(self.ptr.cast(), self.len))
     }
 }
 
@@ -384,7 +381,6 @@ pub unsafe extern "C" fn internals_drop(internals: *mut Internals) {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub struct Completion {
     context: *mut c_void,
     action: unsafe extern "C" fn(context: *mut c_void, error: *const c_char),
@@ -462,9 +458,7 @@ pub unsafe extern "C" fn internals_query(
         title.as_str(),
         sort_column,
         sort_order,
-        |id| {
-            append_integer(ids, id);
-        },
+        |id| append_integer(ids, id),
     ) {
         eprintln!("Failed to query shows: {}", err);
     }
@@ -472,9 +466,7 @@ pub unsafe extern "C" fn internals_query(
 
 #[no_mangle]
 pub unsafe extern "C" fn internals_fetch(internals: *mut Internals, id: i64, show: *mut c_void) {
-    if let Err(err) = (*internals).fetch(id, |data| {
-        fetch_show(show, &data);
-    }) {
+    if let Err(err) = (*internals).fetch(id, |data| fetch_show(show, &data)) {
         eprintln!("Failed to fetch show: {}", err);
     }
 }

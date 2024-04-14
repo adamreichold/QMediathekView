@@ -11,7 +11,7 @@ use time::Time;
 use super::{
     compressor::{BackgroundCompressor, Decompressor},
     parser::Item,
-    Error, Fallible,
+    Fallible,
 };
 
 const TEXT_BLOB_LEN: usize = 256 * 1024;
@@ -393,7 +393,7 @@ impl BlobFetcher {
             let mut rows = stmt.query(params![blob_id])?;
             let row = rows
                 .next()?
-                .ok_or_else(|| Error::from(format!("No BLOB with ID {}", blob_id)))?;
+                .ok_or_else(|| format!("No BLOB with ID {}", blob_id))?;
 
             let blob = row.get_ref_unwrap(0).as_blob()?;
 

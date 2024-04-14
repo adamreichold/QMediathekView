@@ -109,7 +109,8 @@ impl Compressor {
             return Err("Cannot compress text containing nul character".into());
         }
 
-        let offset: u32 = self.buf.len().try_into().unwrap();
+        let offset = self.buf.len().try_into().unwrap();
+
         self.buf.extend_from_slice(text.as_bytes());
         self.buf.push(b'\0');
 
