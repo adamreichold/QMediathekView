@@ -42,6 +42,8 @@ DEFINE_KEY(partialListUrl);
 DEFINE_KEY(databaseUpdateAfterHours);
 DEFINE_KEY(databaseUpdatedOn);
 
+DEFINE_KEY(manualColumnSize);
+
 DEFINE_KEY(playCommand);
 DEFINE_KEY(downloadCommand);
 
@@ -51,6 +53,7 @@ DEFINE_KEY(preferredUrl);
 
 DEFINE_KEY(mainWindowGeometry);
 DEFINE_KEY(mainWindowState);
+DEFINE_KEY(headerViewState);
 
 #undef DEFINE_KEY
 
@@ -65,6 +68,8 @@ const auto fullListUrl = QStringLiteral("https://liste.mediathekview.de/Filmlist
 const auto partialListUrl = QStringLiteral("https://liste.mediathekview.de/Filmliste-diff.xz");
 
 constexpr auto databaseUpdateAfterHours = 3;
+
+constexpr auto manualColumnSize = false;
 
 const auto playCommand = QStringLiteral("vlc %1");
 
@@ -121,6 +126,16 @@ void Settings::setDatabaseUpdatedOn()
 void Settings::resetDatabaseUpdatedOn()
 {
     m_settings->remove(Keys::databaseUpdatedOn);
+}
+
+bool Settings::manualColumnSize() const
+{
+    return m_settings->value(Keys::manualColumnSize, Defaults::manualColumnSize).toBool();
+}
+
+void Settings::setManualColumnSize(bool enabled)
+{
+    m_settings->setValue(Keys::manualColumnSize, enabled);
 }
 
 QString Settings::playCommand() const
@@ -181,6 +196,16 @@ QByteArray Settings::mainWindowState() const
 void Settings::setMainWindowState(const QByteArray& state)
 {
     m_settings->setValue(Keys::mainWindowState, state);
+}
+
+QByteArray Settings::headerViewState() const
+{
+    return m_settings->value(Keys::headerViewState).toByteArray();
+}
+
+void Settings::setHeaderViewState(const QByteArray& state)
+{
+    m_settings->setValue(Keys::headerViewState, state);
 }
 
 } // QMediathekView
