@@ -11,7 +11,7 @@ crate-type = ["staticlib"]
 time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2.4"
 rayon-core = "1.6"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.34", features = ["bundled"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 xz2 = "0.1"
