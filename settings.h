@@ -55,6 +55,9 @@ public:
     void setDatabaseUpdatedOn();
     void resetDatabaseUpdatedOn();
 
+    bool manualColumnSize() const;
+    void setManualColumnSize(bool enabled);
+
     QString playCommand() const;
     void setPlayCommand(const QString& command);
 
@@ -73,6 +76,8 @@ public:
     QByteArray mainWindowState() const;
     void setMainWindowState(const QByteArray& state);
 
+    QByteArray headerViewState() const;
+    void setHeaderViewState(const QByteArray& state);
 private:
     QSettings* m_settings;
 
