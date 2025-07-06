@@ -393,7 +393,7 @@ impl BlobFetcher {
             let mut rows = stmt.query(params![blob_id])?;
             let row = rows
                 .next()?
-                .ok_or_else(|| format!("No BLOB with ID {}", blob_id))?;
+                .ok_or_else(|| format!("No BLOB with ID {blob_id}"))?;
 
             let blob = row.get_ref_unwrap(0).as_blob()?;
 

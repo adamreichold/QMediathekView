@@ -201,12 +201,11 @@ FROM channels, topics, shows, shows_by_title
 WHERE channels.id = topics.channel_id
 AND topics.id = shows.topic_id
 AND shows.id = shows_by_title.rowid
-{}
-{}
-{}
-ORDER BY {}
-"#,
-            channel_filter, topic_filter, title_filter, order_by
+{channel_filter}
+{topic_filter}
+{title_filter}
+ORDER BY {order_by}
+"#
         ))?;
 
         let mut rows = stmt.query(params.as_slice())?;
@@ -244,7 +243,7 @@ AND shows.id = ?
         let mut rows = stmt.query([&id])?;
         let row = rows
             .next()?
-            .ok_or_else(|| format!("No show with ID {}", id))?;
+            .ok_or_else(|| format!("No show with ID {id}"))?;
 
         let channel = row.get_ref_unwrap(0).as_str()?;
         let topic = row.get_ref_unwrap(1).as_str()?;
@@ -368,7 +367,7 @@ pub unsafe extern "C" fn internals_init(
     match Internals::init(path, &mut *needs_update) {
         Ok(internals) => Box::into_raw(Box::new(internals)),
         Err(err) => {
-            eprintln!("Failed to initialize internals: {}", err);
+            eprintln!("Failed to initialize internals: {err}");
 
             null_mut()
         }
@@ -427,7 +426,7 @@ pub unsafe extern "C" fn internals_partial_update(
 #[no_mangle]
 pub unsafe extern "C" fn internals_channels(internals: *mut Internals, channels: *mut c_void) {
     if let Err(err) = (*internals).channels(|channel| append_string(channels, channel)) {
-        eprintln!("Failed to fetch channels: {}", err);
+        eprintln!("Failed to fetch channels: {err}");
     }
 }
 
@@ -438,7 +437,7 @@ pub unsafe extern "C" fn internals_topics(
     topics: *mut c_void,
 ) {
     if let Err(err) = (*internals).topics(channel.as_str(), |topic| append_string(topics, topic)) {
-        eprintln!("Failed to fetch topics: {}", err);
+        eprintln!("Failed to fetch topics: {err}");
     }
 }
 
@@ -460,13 +459,13 @@ pub unsafe extern "C" fn internals_query(
         sort_order,
         |id| append_integer(ids, id),
     ) {
-        eprintln!("Failed to query shows: {}", err);
+        eprintln!("Failed to query shows: {err}");
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn internals_fetch(internals: *mut Internals, id: i64, show: *mut c_void) {
     if let Err(err) = (*internals).fetch(id, |data| fetch_show(show, &data)) {
-        eprintln!("Failed to fetch show: {}", err);
+        eprintln!("Failed to fetch show: {err}");
     }
 }
