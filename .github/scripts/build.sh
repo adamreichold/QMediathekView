@@ -1,4 +1,4 @@
-sudo apt-get install --yes --no-install-recommends qtbase5-dev qt5-qmake libqt5svg5-dev qt5-default
+sudo apt-get install --yes --no-install-recommends qtbase5-dev qt5-qmake libqt5svg5-dev fuse
 
 mkdir -p build
 pushd build
