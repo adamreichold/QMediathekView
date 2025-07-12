@@ -338,7 +338,7 @@ void Model::update()
 void Model::query()
 {
     m_id = m_database.query(m_channel, m_topic, m_title, m_sortColumn, m_sortOrder);
-    m_fetched = 0;
+    m_fetched = qMin(fetchSize, m_id.size());
 }
 
 template< typename Member >
