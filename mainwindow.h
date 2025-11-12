@@ -56,6 +56,8 @@ public:
     void showDatabaseUpdateFailure(const QString& error);
 
 private:
+    void adjustSectionResizeMode();
+
     void resetFilterPressed();
     void updateDatabasePressed();
     void editSettingsPressed();

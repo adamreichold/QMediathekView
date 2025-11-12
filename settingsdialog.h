@@ -24,6 +24,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QDialog>
 
+class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QSpinBox;
@@ -52,6 +53,8 @@ private:
     Settings& m_settings;
 
     QSpinBox* m_databaseUpdateAfterHoursBox;
+
+    QCheckBox* m_manualColumnSize;
 
     QLineEdit* m_playCommandEdit;
     QLineEdit* m_downloadCommandEdit;
