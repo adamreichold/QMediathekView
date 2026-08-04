@@ -106,8 +106,6 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_tableView->verticalHeader()->setVisible(false);
-    m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    m_tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
     connect(m_tableView, &QTableView::activated, this, &MainWindow::activated);
     connect(m_tableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentChanged);
@@ -145,8 +143,6 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     m_titleEdit = new QLineEdit(searchWidget);
     m_titleEdit->setFocus();
     searchLayout->addRow(tr("Title"), m_titleEdit);
-
-    m_tableView->horizontalHeader()->setMaximumSectionSize(qMax(m_channelBox->sizeHint().width(), m_topicBox->sizeHint().width()));
 
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::timeout);
 
@@ -223,8 +219,11 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     const auto quitShortcut = new QShortcut(QKeySequence::Quit, this);
     connect(quitShortcut, &QShortcut::activated, this, &MainWindow::close);
 
+    adjustSectionResizeMode();
+
     restoreGeometry(m_settings.mainWindowGeometry());
     restoreState(m_settings.mainWindowState());
+    m_tableView->horizontalHeader()->restoreState(m_settings.headerViewState());
 
     setWindowTitle(qApp->applicationName() + QStringLiteral("[*]"));
     statusBar()->showMessage(tr("Ready"), messageTimeout);
@@ -234,6 +233,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     m_settings.setMainWindowGeometry(saveGeometry());
     m_settings.setMainWindowState(saveState());
+    m_settings.setHeaderViewState(m_tableView->horizontalHeader()->saveState());
 
     QMainWindow::closeEvent(event);
 }
@@ -256,6 +256,21 @@ void MainWindow::showDatabaseUpdateFailure(const QString& error)
     statusBar()->showMessage(tr("Failed to update database: %1").arg(error), errorMessageTimeout);
 }
 
+void MainWindow::adjustSectionResizeMode()
+{
+    if (m_settings.manualColumnSize())
+    {
+        m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    }
+    else
+    {
+        m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+        m_tableView->horizontalHeader()->setMaximumSectionSize(qMax(m_channelBox->sizeHint().width(), m_topicBox->sizeHint().width()));
+    }
+
+    m_tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+}
+
 void MainWindow::resetFilterPressed()
 {
     m_channelBox->clearEditText();
@@ -271,6 +286,8 @@ void MainWindow::updateDatabasePressed()
 void MainWindow::editSettingsPressed()
 {
     SettingsDialog(m_settings, this).exec();
+
+    adjustSectionResizeMode();
 }
 
 void MainWindow::playClicked()

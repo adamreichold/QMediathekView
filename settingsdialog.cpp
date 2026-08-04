@@ -22,6 +22,7 @@ along with QMediathekView.  If not, see <http://www.gnu.org/licenses/>.
 #include "settingsdialog.h"
 
 #include <QAction>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
@@ -49,6 +50,10 @@ SettingsDialog::SettingsDialog(
     m_databaseUpdateAfterHoursBox->setPrefix(tr("after "));
     m_databaseUpdateAfterHoursBox->setSuffix(tr(" hours"));
     layout->addRow(tr("Database update"), m_databaseUpdateAfterHoursBox);
+
+    m_manualColumnSize = new QCheckBox(this);
+    m_manualColumnSize->setChecked(m_settings.manualColumnSize());
+    layout->addRow(tr("Manual column size"), m_manualColumnSize);
 
     m_playCommandEdit = new QLineEdit(this);
     m_playCommandEdit->setText(m_settings.playCommand());
@@ -86,6 +91,8 @@ void SettingsDialog::accept()
     QDialog::accept();
 
     m_settings.setDatabaseUpdateAfterHours(m_databaseUpdateAfterHoursBox->value());
+
+    m_settings.setManualColumnSize(m_manualColumnSize->isChecked());
 
     m_settings.setPlayCommand(m_playCommandEdit->text());
     m_settings.setDownloadCommand(m_downloadCommandEdit->text());
