@@ -56,6 +56,7 @@ public:
     void showDatabaseUpdateFailure(const QString& error);
 
 private:
+    void livestreamPressed();
     void resetFilterPressed();
     void updateDatabasePressed();
     void editSettingsPressed();

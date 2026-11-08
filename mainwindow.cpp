@@ -163,6 +163,10 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     buttonsWidget->setLayout(buttonsLayout);
     buttonsLayout->setSizeConstraint(QLayout::SetFixedSize);
 
+    const auto livestreamButton = new QPushButton(QIcon::fromTheme(QStringLiteral("media-playback-start")), tr("Livestream"), buttonsWidget);
+    livestreamButton->setToolTip(tr("Show livestreams"));
+    buttonsLayout->addWidget(livestreamButton);
+
     const auto resetFilterButton = new QPushButton(QIcon::fromTheme(QStringLiteral("edit-clear")), QString(), buttonsWidget);
     buttonsLayout->addWidget(resetFilterButton);
 
@@ -172,6 +176,7 @@ MainWindow::MainWindow(Settings& settings, Model& model, Application& applicatio
     const auto editSettingsButton = new QPushButton(QIcon::fromTheme(QStringLiteral("preferences-system")), QString(), buttonsWidget);
     buttonsLayout->addWidget(editSettingsButton);
 
+    connect(livestreamButton, &QPushButton::pressed, this, &MainWindow::livestreamPressed);
     connect(resetFilterButton, &QPushButton::pressed, this, &MainWindow::resetFilterPressed);
     connect(updateDatabaseButton, &QPushButton::pressed, this, &MainWindow::updateDatabasePressed);
     connect(editSettingsButton, &QPushButton::pressed, this, &MainWindow::editSettingsPressed);
@@ -254,6 +259,13 @@ void MainWindow::showDatabaseUpdateFailure(const QString& error)
 {
     setWindowModified(false);
     statusBar()->showMessage(tr("Failed to update database: %1").arg(error), errorMessageTimeout);
+}
+
+void MainWindow::livestreamPressed()
+{
+    m_channelBox->clearEditText();
+    m_topicBox->setEditText(QStringLiteral("Livestream"));
+    m_titleEdit->clear();
 }
 
 void MainWindow::resetFilterPressed()
